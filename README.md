@@ -15,11 +15,15 @@ This software is currently in alpha
 - [x] Item selection and download
 - [ ] Video lesson download
 - [ ] Directory and sub-directory sync
+- [ ] Maintain materials tree structure
 
 ## Install Requirements:
 
 * Java 8
 * JavaFX (Should be included in Java 8)
+
+Just put the jar file in a directory with writable permissions. 
+Files will be downloaded in the locally created 'Downloads' directory.
 
 ## TODO:
 
