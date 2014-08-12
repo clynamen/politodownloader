@@ -12,12 +12,12 @@ abstract class Req()
 case class LoginReq() extends  Req
 case class ClassesReq() extends Req
 case class DirReq(pid: Int, url: String, recursive: Boolean) extends  Req
-case class FileReq(url: String, outputDir: String) extends Req
+case class FileReq(id : Int, url: String, outputDir: String) extends Req
 
 abstract  class ClientStatus(msg : String)
 case class LoginOk(msg: String) extends ClientStatus(msg)
 case class LoginFailed(msg: String) extends ClientStatus(msg)
-case class FileDownloaded(msg: String) extends ClientStatus(msg)
+case class FileDownloaded(fileId: Int, msg: String) extends ClientStatus(msg)
 
 class ClientActor(val guiUpdateActor: ActorRef, userId : String, password: String) extends Actor with Logging {
   val client = new Client(userId, password)
@@ -36,11 +36,11 @@ class ClientActor(val guiUpdateActor: ActorRef, userId : String, password: Strin
         case PFile(url, label, id) => guiUpdateActor ! MFile(label, pid, id, url, recursive)
       })
     }
-    case FileReq(url, outputDir)=> {
+    case FileReq(id, url, outputDir)=> {
       log.info(f"requesting download of $url in $outputDir ")
       // FIX-ME: override outputDir
       val filename = client.downloadFile(url, "./downloads/")
-      guiUpdateActor ! FileDownloaded(f"""Downloaded $filename""")
+      guiUpdateActor ! FileDownloaded(id, f"""Downloaded $filename""")
     }
     case a @ _ => log.info("Unknown msg received, was: " + a);
   }

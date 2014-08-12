@@ -27,7 +27,8 @@ object UserPasswordDialog extends  Logging {
       }
       val storePasswordCheckbox = new CheckBox() {
         padding = Insets(20)
-        text = "Store password for next use. (stored in plain text)"
+        disable = true
+        text = "Store password for next use. (stored in plain text) (broken in scala 2.11)"
       }
 
       val exitButton = new Button() {

@@ -16,6 +16,7 @@ case class AFile(url: String, id: Int, label: String) extends  MInfo
 object Parser {
   val showIncRegex = """javascript:showInc\('(\d+)','(\w+)','(\d+)','(\d+)'\);*""".r
   val nextLevelRegex = """javascript:nextLevel\('(\d+)','(\d+)','(\d+)'\);*""".r
+  val nodRegex = """.+nod=(\d+)$""".r
 }
 
 class Parser extends Logging {
@@ -48,7 +49,8 @@ class Parser extends Logging {
         link.select("img").remove()
         classes = new MClass(inc.toInt, nod.toInt, doc.toInt, link.html) :: classes
       } else if (href.contains("download")) {
-        classes = new AFile(href, 0, link.html) :: classes
+        val nodRegex(fileId) = href
+        classes = new AFile(href, fileId.toInt, link.html) :: classes
       }
     }
     val classesList = classes.toList

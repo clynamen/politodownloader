@@ -11,25 +11,23 @@ class FileTreeItem(label : String, itemId: Int, url : String,
   import io.clynamen.github.PolitoDownloader.Gui.FileTreeItem._
 
   val itemCheckbox = new CheckBox();
-  itemCheckbox.selectedProperty().addListener(makeAddFileCheckboxListener(url, fileStatusChangeCallback))
+  itemCheckbox.selectedProperty().addListener(makeAddFileCheckboxListener(itemId, url, fileStatusChangeCallback))
   graphic = itemCheckbox
 
   override def check(checked : Boolean) = itemCheckbox.selected = checked
-  override def checkable(checkable : Boolean) = {
-    println(f"\n\n checkable $checkable \n\n")
-    itemCheckbox.selected = false
-    itemCheckbox.disable = !checkable
-  }
-  override  def checkbox = itemCheckbox
+
+  override def checkable(checkable : Boolean) = itemCheckbox.disable = !checkable
+
+  override def checked : Boolean = itemCheckbox.selected.value
 }
 
 object FileTreeItem {
   type OnFileStatusChangeCallback = (FileDownloadDetails, Boolean) => Unit
-  def makeAddFileCheckboxListener(url : String,
+  def makeAddFileCheckboxListener(itemId : Int, url : String,
                                   statusChangeCallback: OnFileStatusChangeCallback) =
       new ChangeListener[java.lang.Boolean] {
         override def changed(observable: ObservableValue[_ <: lang.Boolean],
                          oldValue: lang.Boolean, newValue: lang.Boolean) = statusChangeCallback(
-          new FileDownloadDetails(url, ""), newValue)
+          new FileDownloadDetails(itemId, url, ""), newValue)
       }
 }

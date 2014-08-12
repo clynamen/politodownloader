@@ -24,6 +24,8 @@ This software is currently in alpha
 ## TODO:
 
 * cleanup current code
+* use a MVC for the treeview
+* improve ui layout
 * remove mutable variables
 * add error handling for actors
 * search for possible concurrency/lost message  issues

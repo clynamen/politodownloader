@@ -13,7 +13,7 @@ import scalafx.application.JFXApp
 import scalafx.application.JFXApp.PrimaryStage
 import scalafx.scene.Scene
 import scalafx.scene.control._
-import scalafx.scene.layout.{BorderPane, HBox, VBox}
+import scalafx.scene.layout.{BorderPane, HBox, Priority, VBox}
 
 
 object MainWindow extends JFXApp with Logging {
@@ -21,14 +21,10 @@ object MainWindow extends JFXApp with Logging {
   var actorSystem : ActorSystem = null
   var workerActor : ActorRef = null
   var toDownloadSet = scala.collection.mutable.Set[FileDownloadDetails]()
-  val DownloadFilesButtonText = "Select files to download"
+  val DownloadFilesButtonText = "Select the files to download"
 
   def fetchDir(pid: Int, url: String, recursive: Boolean) = {
     workerActor ! DirReq(pid, url, recursive)
-  }
-
-  def fetchFile(url: String, fileName: String) = {
-    workerActor ! FileReq(url, fileName)
   }
 
   val statusLine = new Label() {
@@ -44,7 +40,7 @@ object MainWindow extends JFXApp with Logging {
     minHeight = 50
     maxWidth = 100
     maxHeight= 50
-    text = DownloadFilesButtonText
+    text = "Waiting..."
     onAction = handle {
       downloadFiles()
     }
@@ -52,8 +48,9 @@ object MainWindow extends JFXApp with Logging {
 
   val treeView = new TreeView[String] {
     val conf = ConfManager.readConf
-    minWidth = 700
-    minHeight = 500
+    minWidth = 300
+    minHeight = 200
+    hgrow = Priority.ALWAYS
     showRoot = false
     root = rootTreeItem
   }
@@ -67,15 +64,16 @@ object MainWindow extends JFXApp with Logging {
       root = new BorderPane {
         top = menuBar
         center = new HBox( ) {
-            content = List(
-              treeView,
-              new VBox {
-                content = List(
-                statusLine,
-                downloadButton
+          content = List(
+            treeView,
+            new VBox {
+              content = List(
+              statusLine,
+              downloadButton
               )
             }
           )
+
         }
       }
     }
@@ -147,15 +145,17 @@ object MainWindow extends JFXApp with Logging {
 
   def downloadFiles() = {
     toDownloadSet.foreach(d => {
-      workerActor ! FileReq(d.url, d.path)
+      workerActor ! FileReq(d.fileId, d.url, d.path)
     })
     toDownloadSet.clear()
     toDownloadSet = collection.mutable.Set[FileDownloadDetails]()
-    itemMap.values.foreach( v=>v match {
-      case t : FileTreeItem => if(t.checkbox.selected.value) t.checkable(false)
-      case _ => ;
-    })
+
     updateDownloadButton()
+  }
+
+  def onFileDownloaded(fileId: Int, msg : String) = {
+    updateStatusLine(msg)
+    itemMap.get(fileId).get.checkable(false)
   }
 
   class GUIUpdateActor extends Actor {
@@ -163,13 +163,14 @@ object MainWindow extends JFXApp with Logging {
     def receive = {
       case LoginOk(msg) => {
         updateStatusLine(msg)
+        Platform.runLater(funToRunnable(()=> updateDownloadButton()))
         workerActor ! ClassesReq()
       }
       case LoginFailed(msg) => {
         updateStatusLine(msg)
       }
-      case FileDownloaded(msg) => {
-        updateStatusLine(msg)
+      case FileDownloaded(id, msg) => {
+        Platform.runLater(funToRunnable(()=> onFileDownloaded(id, msg)))
       }
       case MDir(name, pid, id, url, recursive) => {
         Platform.runLater(funToRunnable(() => {
@@ -196,7 +197,12 @@ object MainWindow extends JFXApp with Logging {
     menus = List(
       new Menu("File") {
         items = List(
-          new MenuItem("reset and close") {
+          new MenuItem("close") {
+            onAction = handle {
+              stopApp()
+            }
+          },
+          new MenuItem("reset configuration and close") {
             onAction = handle {
               ConfManager.deleteConf
               stopApp()

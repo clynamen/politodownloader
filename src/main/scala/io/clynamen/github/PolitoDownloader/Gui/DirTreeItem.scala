@@ -41,11 +41,10 @@ class DirTreeItem(id: Int, label: String, url: String,
     }
 
     override def check(checked : Boolean) = itemCheckbox.selected = checked
-    override def checkable(checkable : Boolean) = {
-      itemCheckbox.selected = false
-      itemCheckbox.disable = !checkable
-    }
-    override def checkbox = itemCheckbox
+
+    override def checkable(checkable : Boolean) =  itemCheckbox.disable = !checkable
+
+    override def checked : Boolean = itemCheckbox.selected.value
 
     def checkAllRecursive(checked: Boolean) = expandAndCheckRecursive(this, checked)
 }
