@@ -5,7 +5,6 @@ name := "politodownloader"
 version := "0.1.0"
 
 scalaVersion := "2.11.2"
-//scalaVersion := "2.10"
 
 oneJarSettings
 
@@ -13,12 +12,16 @@ scalacOptions := Seq("-deprecation", "-unchecked", "-feature")
 
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
-// Add jfxrt jar due to missing modena.css file
-//unmanagedJars in Compile += Attributed.blank(file(System.getenv("JAVA_HOME") + "/jre/lib/ext/jfxrt.jar"))
-
-// TODO: add https://gist.github.com/mucaho/8973013 to the list of contributors.
-
 resolvers += "spray" at "http://repo.spray.io/"
+
+//lazy val ssoup = RootProject(uri("git://github.com/clynamen/ssoup.git")).settings(exportJars in compile := true)
+lazy val ssoup = RootProject(uri("git://github.com/clynamen/ssoup.git"))
+  
+exportJars in ssoup := true
+
+//exportJars in Compile := true
+
+lazy val root = Project(id = "politodownloader", base = file(".")).dependsOn(ssoup)
 
 libraryDependencies ++= Seq(
   //"org.scalatest" % "scalatest_2.10" % "2.0" % "test" withSources() withJavadoc(),
