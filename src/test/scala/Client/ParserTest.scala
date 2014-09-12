@@ -10,11 +10,6 @@ class ParserTest extends FunSuite {
   val nextLevelTestString = "javascript:nextLevel('197469','32346912','11415');"
   val showIncTestString = "javascript:showInc('2014','D','3','6996');"
 
-  def askFileAndGetContent(fileDescription: String ) : String = {
-    val filename = getCleanedInput(f"Insert filename of $fileDescription")
-    getTestFileContent(filename)
-  }
-
   def getTestFileContent(filename: String) = FileUtils.slurp(getClass.getResource(filename))
 
   test (f"nextLevel regex should match the string $nextLevelTestString") {
@@ -32,29 +27,27 @@ class ParserTest extends FunSuite {
     assert(mat.toInt === 6996)
   }
 
-  test("Parsed courses index should have 196 results") {
-    val filename = "/sviluppo.materiale.elenco.htm"
-    //val content : String = getFileContent("webpage with courses (?t=2)")
-    val content : String = getTestFileContent(filename)
-    assert(content != null)
-
-    val parser = new Parser()
-    val classes = parser.parseCourses(content)
-
-    assert(196 === classes.length)
-  }
-
-  test("Parsed course index should have 4 results ") {
-    val filename = "/corso.htm"
-    //val content : String = getFileContent("webpage with courses (?t=2)")
-    val content : String = getTestFileContent(filename)
-    assert(content != null)
-
-    val parser = new Parser()
-    val classes = parser.parseClasses(content)
-
-    assert(3 === classes.length)
-  }
+//  test("Parsed courses index should have 196 results") {
+//    val filename = "/sviluppo.materiale.elenco.htm"
+//    val content : String = getTestFileContent(filename)
+//    assert(content != null)
+//
+//    val parser = new Parser()
+//    val classes = parser.parseCourses(content)
+//
+//    assert(196 === classes.length)
+//  }
+//
+//  test("Parsed course index should have 4 results ") {
+//    val filename = "/corso.htm"
+//    val content : String = getTestFileContent(filename)
+//    assert(content != null)
+//
+//    val parser = new Parser()
+//    val classes = parser.parseClasses(content)
+//
+//    assert(3 === classes.length)
+//  }
 
 
 }
