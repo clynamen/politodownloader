@@ -57,8 +57,6 @@ object  DirTreeItem {
 
       def trySelectCheckbox(n: Node) {
         n match {
-          case c: scalafx.scene.control.CheckBox =>
-            c.selected = checked
           case c: javafx.scene.control.CheckBox =>
             c.selected = checked
           case _ => ;

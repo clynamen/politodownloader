@@ -1,7 +1,9 @@
 package io.clynamen.github.PolitoDownloader.Utils
+
 import scala.io.Source
 import java.net.URI
 import java.net.URL
+import scala.language.implicitConversions
 
 object StringUtils {
 
