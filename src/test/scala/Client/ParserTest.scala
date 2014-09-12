@@ -4,7 +4,6 @@ import io.clynamen.github.PolitoDownloader.Client._
 import io.clynamen.github.PolitoDownloader.Utils.FileUtils
 import io.clynamen.github.PolitoDownloader.Client.Parser._
 import org.scalatest._
-import TestUtils.TestUtils._
 
 class ParserTest extends FunSuite {
   val nextLevelTestString = "javascript:nextLevel('197469','32346912','11415');"
