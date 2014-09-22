@@ -14,6 +14,7 @@ import scala.collection.mutable.{Map, Stack}
   treeView.root = rootItem
 
   private val itemToTreeItemMap = Map[ItemView, TreeItem[ItemView]]()
+  private var itemCount = 0
 
   def addItemAtRoot(item: ItemView) : Unit = {
     val treeItem = createTreeItem(item)
@@ -27,6 +28,20 @@ import scala.collection.mutable.{Map, Stack}
     })
     addToTreeItem(parentTreeItem, item, treeItem)
   }
+
+  def length = itemCount
+
+  def checkItem(item: ItemView, checked: Boolean) = {
+     setChecked(getTreeItemOrThrowNonExistent(item), checked)
+  }
+
+  def checkItemRecursively(item: ItemView, checked: Boolean) = {
+    recursiveCheck(getTreeItemOrThrowNonExistent(item), checked)
+  }
+
+  def isChecked(item: ItemView) : Boolean = getChecked(getTreeItemOrThrowNonExistent(item))
+
+  def getTreeItemOrThrowNonExistent(item: ItemView) = itemToTreeItemMap.getOrElse(item, throw new Exception("Non existent item"))
 
   def checkedLeaves() = getLeaves(v=>(v.graphic.value.asInstanceOf[jfxsc.CheckBox]).selected.value)
   def uncheckedLeaves() = getLeaves(v=>(!(v.graphic.value.asInstanceOf[jfxsc.CheckBox]).selected.value))
@@ -91,6 +106,7 @@ import scala.collection.mutable.{Map, Stack}
   private def addToTreeItem(parent: TreeItem[ItemView], child: ItemView, childTreeItem: TreeItem[ItemView]) = {
     parent.children.add(childTreeItem)
     itemToTreeItemMap.put(child, childTreeItem)
+    itemCount += 1
   }
 
   private def createTreeItem(item: ItemView) = {
@@ -110,7 +126,10 @@ import scala.collection.mutable.{Map, Stack}
    }
 
    private def setChecked(item: TreeItem[ItemView], value : Boolean) =
-     item.graphic.value.asInstanceOf[jfxsc.CheckBox].selected = value
+     item.graphic.value.asInstanceOf[jfxsc.CheckBox].selected.value = value
+
+   private def getChecked(item: TreeItem[ItemView]) =
+      item.graphic.value.asInstanceOf[jfxsc.CheckBox].selected.value
 
 }
 

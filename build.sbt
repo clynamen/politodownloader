@@ -31,12 +31,16 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" % "akka-actor_2.11" % "2.3.4",
   "org.scala-lang" % "scala-library" % "2.11.2",
   "org.streum" % "configrity-core_2.10" % "1.0.0",
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2"
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2",
+  "net.java.jemmy" % "JemmyFX" % "0.9.3-SNAPSHOT"
 )
 
 mainClass in Compile := Some("io.clynamen.github.PolitoDownloader.Gui.MainWindow")
 
 mainClass in oneJar := Some("io.clynamen.github.PolitoDownloader.Gui.MainWindow")
+
+// parallel execution breaks scalafx tests
+parallelExecution in Test := false
 
 initialCommands := "import io.clynamen.github.PolitoDownloader._"
 
