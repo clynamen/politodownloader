@@ -18,7 +18,7 @@ import scalafx.scene.layout.{BorderPane, HBox, Priority, VBox}
 
 
 object TestMainWindow extends JFXApp with Logging {
-  val checkboxTreeView = CheckboxTreeView[GItemView, TextItemViewVisitor](NullListener[GItemView]())
+  val checkboxTreeView = CheckboxTreeView[GItemView](NullListener[GItemView]())
   val item = new TextItemView
   checkboxTreeView.addItemAtRoot(item)
   checkboxTreeView.addItem(item, new TextItemView)
@@ -45,8 +45,8 @@ object TestMainWindow extends JFXApp with Logging {
   }
 }
 
-trait GItemView extends CheckboxTreeViewItemView[TextItemViewVisitor] {
-
+trait GItemView {
+  def visit(visitor: TextItemViewVisitor)
 }
 
 class TextItemView extends GItemView {

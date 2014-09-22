@@ -1,6 +1,6 @@
 package io.clynamen.github.PolitoDownloader.Test.Gui
 
-import io.clynamen.github.PolitoDownloader.Gui.{CheckboxTreeViewItemView, CheckboxTreeViewListener, CheckboxTreeView}
+import io.clynamen.github.PolitoDownloader.Gui.{CheckboxTreeViewListener, CheckboxTreeView}
 import org.scalatest.FunSuite
 
 import scalafx.application.JFXApp
@@ -11,7 +11,7 @@ class CheckboxTreeViewTest extends FunSuite {
 
 
   test("it should add new child") {
-    val checkboxTreeView = CheckboxTreeView[TextItemView, TextItemViewVisitor](NullListener[TextItemView]())
+    val checkboxTreeView = CheckboxTreeView[TextItemView](NullListener[TextItemView]())
     val item = new TextItemView
     checkboxTreeView.addItemAtRoot(item)
     new APP(checkboxTreeView)
@@ -20,7 +20,7 @@ class CheckboxTreeViewTest extends FunSuite {
 
 }
 
-class APP(view : CheckboxTreeView[_,_] = null) extends JFXApp {
+class APP(view : CheckboxTreeView[_] = null) extends JFXApp {
   stage = new PrimaryStage {
     scene = new Scene {
       stylesheets.add("Modena.css")
@@ -29,8 +29,8 @@ class APP(view : CheckboxTreeView[_,_] = null) extends JFXApp {
   }
 }
 
-class TextItemView extends CheckboxTreeViewItemView[TextItemViewVisitor] {
-  override def visit(visitor: TextItemViewVisitor): Unit = {}
+class TextItemView {
+  def visit(visitor: TextItemViewVisitor): Unit = {}
 }
 
 class TextItemViewVisitor {

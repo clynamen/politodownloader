@@ -6,14 +6,9 @@ import scalafx.event.ActionEvent
 import scalafx.scene.control.{CheckBox, TreeItem, Control, TreeView}
 import scala.collection.mutable.{Map, Stack}
 
-//class CheckboxTreeView[ItemView <: CheckboxTreeViewItemView[CheckboxTreeViewVisitor],
-//                        CheckboxTreeViewVisitor] private
-//  (val listener : CheckboxTreeViewListener[ItemView], treeView : TreeView[ItemView] =
-//    new TreeView[ItemView]) extends Control(treeView) {
-  class CheckboxTreeView[ItemView <: CheckboxTreeViewItemView[CheckboxTreeViewVisitor],
-  CheckboxTreeViewVisitor] private
-  (val listener : CheckboxTreeViewListener[ItemView], treeView : TreeView[ItemView] =
-  new TreeView[ItemView]) extends Control(treeView) {
+  class CheckboxTreeView[ItemView] private
+    (val listener : CheckboxTreeViewListener[ItemView], treeView : TreeView[ItemView] =
+      new TreeView[ItemView]) extends Control(treeView) {
 
   private val rootItem = new TreeItem[ItemView]
   treeView.root = rootItem
@@ -103,26 +98,29 @@ import scala.collection.mutable.{Map, Stack}
     val checkbox = new CheckBox
     treeItem.graphic = checkbox
     checkbox.onAction = (event : ActionEvent) => {
+      recursiveCheck(treeItem, checkbox.selected())
       listener.onItemCheckedByUser(item, checkbox.selected())
     }
     treeItem
   }
 
+   private def recursiveCheck(item: TreeItem[ItemView], checked : Boolean): Unit = {
+     setChecked(item, checked)
+     item.children.foreach(c => recursiveCheck(c, checked))
+   }
+
+   private def setChecked(item: TreeItem[ItemView], value : Boolean) =
+     item.graphic.value.asInstanceOf[jfxsc.CheckBox].selected = value
+
 }
 
 object CheckboxTreeView {
 
-  def apply[ItemView <: CheckboxTreeViewItemView[CheckboxTreeViewVisitor], CheckboxTreeViewVisitor]
+  def apply[ItemView]
     (listener: CheckboxTreeViewListener[ItemView]) :
-      CheckboxTreeView[ItemView, CheckboxTreeViewVisitor] = {
-    new CheckboxTreeView[ItemView, CheckboxTreeViewVisitor](listener)
+      CheckboxTreeView[ItemView] = {
+    new CheckboxTreeView[ItemView](listener)
   }
-
-}
-
-trait CheckboxTreeViewItemView[CheckboxTreeViewVisitor] {
-
-  def visit(visitor: CheckboxTreeViewVisitor)
 
 }
 
