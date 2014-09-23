@@ -1,0 +1,21 @@
+package io.clynamen.github.PolitoDownloader.Gui
+
+import scalafx.scene.control.Control
+import scalafx.scene.layout.FlowPane
+import scalafx.Includes._
+import javafx.scene.Node
+import scala.collection.mutable.Map
+
+class DownloadListView[K, V <: Node] extends FlowPane {
+  val keyToItemMap = Map[K,V]()
+
+  def get(k: K) : Option[V] = {
+    keyToItemMap.get(k)
+  }
+
+  def add(k: K, v: V) = {
+    keyToItemMap.put(k, v)
+    content.add(v)
+  }
+
+}

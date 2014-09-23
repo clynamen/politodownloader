@@ -10,6 +10,8 @@ package object ClientUri {
   val CourseVideoIndex = PortalHost + "/pls/portal30/sviluppo.videolezioni.vis"
   val ShibLogin = PortalLoginHost + "/secure-studenti/ShibLogin.php"
   val UserPasswordLogin = IdpHost + "/idp/Authn/X509Mixed/UserPasswordLogin"
-  val MList = PortalHost + "/pls/portal30/sviluppo.materiale.elenco?a=2014&t=M"
+  private val CoursesListUrlFormat = PortalHost + "/pls/portal30/sviluppo.materiale.elenco?a=%d&t=M"
+
+  def courses(year : Integer) = String.format(CoursesListUrlFormat, year)
 
 }

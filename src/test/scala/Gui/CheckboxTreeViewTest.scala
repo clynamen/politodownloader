@@ -132,7 +132,9 @@ class TextItemViewVisitor {
 }
 
 class NullListener[ItemView] extends CheckboxTreeViewListener[ItemView] {
-  override def onItemCheckedByUser(item: ItemView, checked: Boolean): Unit = {}
+  override def onItemCheckedByUser(item: ItemView, checked: Boolean): Unit = Unit
+
+  override def onBranchExpanded(item: ItemView): Unit = Unit
 }
 
 object NullListener {

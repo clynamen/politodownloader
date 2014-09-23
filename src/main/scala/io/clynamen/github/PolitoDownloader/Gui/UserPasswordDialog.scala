@@ -4,10 +4,10 @@ import org.eintr.loglady.Logging
 
 import scala.language.implicitConversions
 import scalafx.Includes._
-import scalafx.geometry.Insets
+import scalafx.geometry.{Pos, Insets}
 import scalafx.scene.Scene
 import scalafx.scene.control._
-import scalafx.scene.layout.{BorderPane, HBox}
+import scalafx.scene.layout.{BorderPane, VBox, HBox}
 import scalafx.stage.Stage
 
 object UserPasswordDialog extends  Logging {
@@ -19,20 +19,29 @@ object UserPasswordDialog extends  Logging {
       title = "Insert user ID and password"
       val userIdTextField =  new TextField() {
         padding = Insets(20)
+        minWidth = 150
         text = "user ID"
       }
+
       val passwordField =  new PasswordField() {
         padding = Insets(20)
+
+        minWidth = 150
         promptText = "password"
       }
+
       val storePasswordCheckbox = new CheckBox() {
         padding = Insets(20)
         disable = true
+        minWidth = 200
         text = "Store password for next use. (stored in plain text) (broken in scala 2.11)"
+        textOverrun = OverrunStyle.ELLIPSIS
+        wrapText = true
       }
 
       val exitButton = new Button() {
         padding = Insets(20)
+        minWidth = 50
         text = "Exit"
         onAction = handle {
           MainWindow.stopApp()
@@ -43,6 +52,7 @@ object UserPasswordDialog extends  Logging {
       val okButton = new Button() {
           padding = Insets(20)
           text = "Go"
+          minWidth = 50
           defaultButton = true
           onAction = handle {
             userId = userIdTextField.text.value
@@ -70,22 +80,32 @@ object UserPasswordDialog extends  Logging {
 
       scene = new Scene {
         stylesheets.add("Modena.css")
-        root = new BorderPane {
-          padding = Insets(25)
-          center = new BorderPane {
-            left = userIdTextField
-            right = passwordField
-          }
-          bottom = new BorderPane {
-            left = storePasswordCheckbox
-            right = new HBox(10) {
-              minWidth= 200
-              padding = Insets(30)
-              content = List(
-              exitButton,
-              okButton
-            )}
-          }
+        minWidth = 550
+        minHeight = 200
+        resizable = false
+
+        root = new VBox {
+          content = List(
+            new HBox(20) {
+              padding = Insets(20)
+              content = List(userIdTextField, passwordField)
+              alignment.value = Pos.CENTER
+            },
+            new VBox(10) {
+              maxHeight = 100
+              content = List(storePasswordCheckbox,
+                new HBox(20) {
+                  content = List(
+                    exitButton,
+                    okButton
+                  )
+                  padding = Insets(20)
+                  alignment.value = Pos.BOTTOM_RIGHT
+                }
+              )
+            }
+          )
+          alignment.value = Pos.CENTER
         }
       }
     }

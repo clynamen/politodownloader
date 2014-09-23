@@ -8,10 +8,10 @@ import org.jsoup.nodes._
 import scala.collection.JavaConversions._
 
 
-abstract class MInfo()
-case class MCourse(anno: Integer, tipo: String, i: Integer, mat: Integer, label: String) extends MInfo
-case class MClass(inc: Int, nod: Int, doc: Int, label: String) extends MInfo
-case class AFile(url: String, id: Int, label: String) extends  MInfo
+abstract class Link()
+case class CourseLink(anno: Integer, tipo: String, i: Integer, mat: Integer, label: String) extends Link
+case class ClassLink(inc: Int, nod: Int, doc: Int, label: String) extends Link
+case class FileLink(url: String, id: Int, label: String, format: String, Size : String) extends Link
 
 object Parser {
   val showIncRegex = """javascript:showInc\('(\d+)','(\w+)','(\d+)','(\d+)'\);*""".r
@@ -22,24 +22,24 @@ object Parser {
 class Parser extends Logging {
   import Parser._
 
-  def parseCourses(s : String) : List[MCourse] = {
+  def parseCourses(s : String) : List[CourseLink] = {
     assert(s != null)
     val doc : Document = SSoup.parse(s)
 
     val classes = doc.select(".policorpolink").iterator.map( link => {
       val showIncRegex(anno, tipo, int , mat ) = link.attr("href")
-      new MCourse(anno.toInt, tipo, int.toInt, mat.toInt, link.html)
+      new CourseLink(anno.toInt, tipo, int.toInt, mat.toInt, link.html)
     })
     val classesList = classes.toList
     log.info("Parsed " + classesList.length.toString + " courses")
     return classesList
   }
 
-  def parseClasses(s : String) : List[MInfo] = {
+  def parseDirContent(s : String) : List[Link] = {
     assert(s != null)
     val doc : Document = SSoup.parse(s)
 
-    var classes = List[MInfo]();
+    var classes = List[Link]();
 
     for (link <- doc.select("a").iterator) {
       val href: String = link.attr("href")
@@ -47,10 +47,10 @@ class Parser extends Logging {
       if (href.contains("nextLevel")) {
         val nextLevelRegex(inc, nod, doc) = href
         link.select("img").remove()
-        classes = new MClass(inc.toInt, nod.toInt, doc.toInt, link.html) :: classes
+        classes = new ClassLink(inc.toInt, nod.toInt, doc.toInt, link.html) :: classes
       } else if (href.contains("download")) {
         val nodRegex(fileId) = href
-        classes = new AFile(href, fileId.toInt, link.html) :: classes
+        classes = new FileLink(href, fileId.toInt, link.html, "", "") :: classes
       }
     }
     val classesList = classes.toList

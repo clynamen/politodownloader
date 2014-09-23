@@ -11,49 +11,77 @@ import scala.language.implicitConversions
 import scalafx.Includes._
 import scalafx.application.JFXApp
 import scalafx.application.JFXApp.PrimaryStage
+import scalafx.geometry.{Insets, Pos}
 import scalafx.scene.Scene
 import scalafx.scene.control._
-import scalafx.scene.layout.{BorderPane, HBox, Priority, VBox}
+import scalafx.scene.layout._
 
 
-object MainWindow extends JFXApp with Logging {
+object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[ContentTreeItem]{
   val Title = "Polito Downloader"
   var actorSystem : ActorSystem = null
   var workerActor : ActorRef = null
-  var toDownloadSet = scala.collection.mutable.Set[FileDownloadDetails]()
   val DownloadFilesButtonText = "Select the files to download"
-
-  def fetchDir(pid: Int, url: String, recursive: Boolean) = {
-    workerActor ! DirReq(pid, url, recursive)
-  }
 
   val statusLine = new Label() {
     minWidth = 200
     maxWidth = 200
   }
 
-  val rootTreeItem =
-    new TreeItem[String]("invisible root")
-
   val downloadButton = new Button() {
-    minWidth = 200
-    minHeight = 50
-    maxWidth = 100
-    maxHeight= 50
+    minWidth = 100
+    minHeight = 30
     text = "Waiting..."
     onAction = handle {
       downloadFiles()
     }
   }
 
-  val treeView = new TreeView[String] {
-    val conf = ConfManager.readConf
-    minWidth = 300
-    minHeight = 200
-    hgrow = Priority.ALWAYS
-    showRoot = false
-    root = rootTreeItem
+  val treeView = CheckboxTreeView[ContentTreeItem](this)
+  val conf = ConfManager.readConf
+  treeView.minWidth = 300
+  treeView.minHeight = 200
+  treeView.hgrow = Priority.ALWAYS
+
+  val downloadBorderPane = new BorderPane {
+    center = treeView
+    bottom =
+      new VBox {
+        content = List(
+          statusLine,
+          new HBox(20) {
+            content = List(
+              downloadButton
+            )
+            alignment = Pos.BOTTOM_RIGHT
+            padding = Insets(20)
+          }
+        )
+        padding = Insets(20)
+      }
   }
+
+  val downloadList = new DownloadListView[ContentId, FileDownloadView]() {
+    margin = Insets(20)
+  }
+
+  val rootTabPane = new TabPane()
+  rootTabPane += new Tab() {
+    content = downloadBorderPane
+    closable = false
+    text = "Files"
+  }
+  rootTabPane += new Tab() {
+    content = downloadList
+    closable = false
+    text = "Download List"
+  }
+
+  val rootPane = new BorderPane {
+    top = menuBar
+    center = rootTabPane
+  }
+
 
   stage = new PrimaryStage {
     onCloseRequest = handle { cleanup() }
@@ -61,21 +89,7 @@ object MainWindow extends JFXApp with Logging {
     scene = new Scene {
       // TODO: not needed in production, but needed under sbt run
       stylesheets.add("Modena.css")
-      root = new BorderPane {
-        top = menuBar
-        center = new HBox( ) {
-          content = List(
-            treeView,
-            new VBox {
-              content = List(
-              statusLine,
-              downloadButton
-              )
-            }
-          )
-
-        }
-      }
+      root = rootPane
     }
   }
 
@@ -112,15 +126,35 @@ object MainWindow extends JFXApp with Logging {
     (system, workerActor)
   }
 
-  var itemMap = scala.collection.mutable.Map[Int, MaterialTreeItem]()
+  var itemMap = scala.collection.mutable.Map[ContentId, ContentTreeItem]()
+  var expandedSet = scala.collection.mutable.Set[ContentId]()
 
-  def addItem(pid: Int, id: Int, item: MaterialTreeItem) = {
-    itemMap.put(id, item)
-    val parent: TreeItem[String] = itemMap.get(pid) match {
-      case Some(parentItem: scalafx.scene.control.TreeItem[String]) => parentItem
-      case None => rootTreeItem
+  def addItem(pid: Option[ContentId], item: ContentTreeItem) = {
+    itemMap.put(item.id, item)
+    pid match {
+      case Some(pidValue) => treeView.addItem(itemMap.get(pidValue).get, item)
+      case None => treeView.addItemAtRoot(item)
     }
-    parent.children.add(item)
+  }
+
+  def expandVisitor(recursive: Boolean) = new ContentTreeItemVisitor {
+    override def visit(item: DocumentTreeItem): Unit = {}
+    override def visit(item: DirectoryTreeItem): Unit = {
+      if(!item.contentFetched) {
+        treeView.removeChildren(item)
+        workerActor ! DirReq(item.directoryInfo.id, item.directoryInfo.url, recursive)
+        item.contentFetched = true
+      }
+    }
+  }
+
+  override def onItemCheckedByUser(item: ContentTreeItem, checked: Boolean) = {
+    item.visit(expandVisitor(checked))
+    checkItemRecursively(item, checked)
+  }
+
+  override def onBranchExpanded(item: ContentTreeItem): Unit = {
+    item.visit(expandVisitor(false))
   }
 
   def updateStatusLine(msg : String) = {
@@ -128,34 +162,61 @@ object MainWindow extends JFXApp with Logging {
     Platform.runLater(funToRunnable(() => statusLine.text = msg))
   }
 
-  def setFileDownloadStatus(downloadDetails : FileDownloadDetails, toDownload : Boolean) = {
-    if(!toDownload && toDownloadSet.contains(downloadDetails))
-      toDownloadSet.remove(downloadDetails)
-    else {
-      toDownloadSet.add(downloadDetails)
-    }
+  def setFileDownloadStatus(downloadDetails : FileInfo, toDownload : Boolean) = {
     updateDownloadButton()
   }
 
   def updateDownloadButton() {
-    val downloadCount = toDownloadSet.size
+    val downloadCount = treeView.checkedLeaves().size
     if(downloadCount > 0) downloadButton.text = f" Download $downloadCount files"
     else downloadButton.text = DownloadFilesButtonText
   }
 
+  def sendFileReq(item: DocumentTreeItem): Unit = {
+    workerActor ! FileReq(item.info.id, item.info.url, getPathForItem(item))
+    val downloadView = new FileDownloadView(item.info)
+    downloadList.content.add(downloadView)
+  }
+
   def downloadFiles() = {
-    toDownloadSet.foreach(d => {
-      workerActor ! FileReq(d.fileId, d.url, d.path)
-    })
-    toDownloadSet.clear()
-    toDownloadSet = collection.mutable.Set[FileDownloadDetails]()
+    val downloadVisitor = new ContentTreeItemVisitor() {
+      override def visit(item: DocumentTreeItem): Unit = {
+        sendFileReq(item)
+      }
+      override def visit(item: DirectoryTreeItem): Unit = {}
+    }
+    treeView.checkedLeaves().foreach(f => f.visit(downloadVisitor))
 
     updateDownloadButton()
   }
 
-  def onFileDownloaded(fileId: Int, msg : String) = {
+  def getPathForItem(item: ContentTreeItem) : String = {
+    treeView.parentOfItem(item) match {
+      case Some(parent) => getPathForItem(parent) + "/" + parent
+      case None => "/"
+    }
+  }
+
+  def checkItem(item: ContentTreeItem, checked: Boolean) = {
+    treeView.checkItem(item, checked)
+    updateDownloadButton()
+  }
+
+  def checkItemRecursively(item: ContentTreeItem, checked: Boolean) = {
+    treeView.checkItemRecursively(item, checked)
+    updateDownloadButton()
+  }
+
+  def onFileDownloaded(fileId: ContentId, msg : String) = {
     updateStatusLine(msg)
-    itemMap.get(fileId).get.checkable(false)
+    val item = itemMap.get(fileId).get
+    checkItem(item, true)
+    treeView.setCheckable(item, false)
+    setDownloadProgress(fileId, 1)
+  }
+
+  def setDownloadProgress(fileId: ContentId, percentage: Double) = {
+    downloadList.get(fileId).get.progress = percentage
   }
 
   class GUIUpdateActor extends Actor {
@@ -164,7 +225,7 @@ object MainWindow extends JFXApp with Logging {
       case LoginOk(msg) => {
         updateStatusLine(msg)
         Platform.runLater(funToRunnable(()=> updateDownloadButton()))
-        workerActor ! ClassesReq()
+        workerActor ! CourseReq(2014)
       }
       case LoginFailed(msg) => {
         updateStatusLine(msg)
@@ -172,22 +233,26 @@ object MainWindow extends JFXApp with Logging {
       case FileDownloaded(id, msg) => {
         Platform.runLater(funToRunnable(()=> onFileDownloaded(id, msg)))
       }
-      case MDir(name, pid, id, url, recursive) => {
+      case (dirInfo @ DirectoryInfo(url, label, id, pid), recursive: Boolean) => {
         Platform.runLater(funToRunnable(() => {
-          val item = new DirTreeItem(id, name, url, fetchDir)
-          addItem(pid, id, item)
+          val item = new DirectoryTreeItem(dirInfo)
+          addItem(dirInfo.pid, item)
           if (recursive) {
-            item.expandItem(true)
-            item.checkAllRecursive(true)
+            treeView.expandRecursively(item)
+            checkItemRecursively(item, true)
+          } else {
+            treeView.addItem(item, new PlaceholderTreeItem)
           }
         })
         )
       }
-      case MFile(name, pid, id, url, recursive) => {
+      case (fileInfo @ FileInfo(url, label, id, pid, formats), recursive: Boolean) => {
         Platform.runLater(funToRunnable(() => {
-          val item = new FileTreeItem(name, id, url, setFileDownloadStatus)
-          addItem(pid, id, item)
-          if (recursive) item.check(true)
+          val item = new DocumentTreeItem(fileInfo)
+          addItem(fileInfo.pid, item)
+          if (recursive)
+            checkItem(item, true)
+          updateDownloadButton()
         }))
       }
     }
@@ -197,10 +262,10 @@ object MainWindow extends JFXApp with Logging {
     menus = List(
       new Menu("File") {
         items = List(
-          new MenuItem("close") {
-            onAction = handle {
-              stopApp()
-            }
+          new Menu("Info") {
+            items = List(
+              new MenuItem("Version: 0.1.0 Alpha")
+            )
           },
           new MenuItem("reset configuration and close") {
             onAction = handle {
@@ -208,10 +273,10 @@ object MainWindow extends JFXApp with Logging {
               stopApp()
             }
           },
-          new Menu("Info") {
-            items = List(
-              new MenuItem("Version: 0.1.0 Alpha")
-            )
+          new MenuItem("close") {
+            onAction = handle {
+              stopApp()
+            }
           }
         )
       }
@@ -231,3 +296,4 @@ object MainWindow extends JFXApp with Logging {
   }
 
 }
+

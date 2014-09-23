@@ -2,6 +2,7 @@ package io.clynamen.github.PolitoDownloader.Client
 
 import java.io.FileWriter
 
+
 import io.clynamen.github.PolitoDownloader.Utils.FileUtils
 import com.gargoylesoftware.htmlunit.Page
 import com.gargoylesoftware.htmlunit.html.HtmlPage
@@ -9,6 +10,7 @@ import org.eintr.loglady.Logging
 import scala.collection.immutable._
 import io.clynamen.github.PolitoDownloader.Utils.StringUtils
 import io.clynamen.github.PolitoDownloader.ClientUri
+import java.net.URI
 import scala.language.reflectiveCalls
 
 class Client(userId : String, password: String) extends Logging {
@@ -63,44 +65,41 @@ class Client(userId : String, password: String) extends Logging {
   def getTestFileContent(filename: String) = FileUtils.slurp(getClass.getResource(filename))
 
 
-  def getCourses() : Seq[PCourse] = {
-    val coursesListPage : Page = mech.get(ClientUri.MList)
+  def getCourses(year: Integer) : Iterable[DirectoryInfo] = {
+    val coursesListPage : Page = mech.get(ClientUri.courses(year))
     val content = coursesListPage.getWebResponse.getContentAsString
 
     val parser = new Parser()
     val classes = parser.parseCourses(content)
 
     classes.map( c => c match {
-      case MCourse (anno, tipo, i, mat, label) =>
+      case CourseLink (anno, tipo, i, mat, label) =>
         val url = f"https://didattica.polito.it/pls/portal30/sviluppo.materiale.incarichi?mat=$mat&aa=$anno&typ=$tipo"
-        new PCourse(url, label, mat)
+        new DirectoryInfo(new URI(url), label, new ContentId(ContentType.Course, mat), None)
     })
   }
 
-  def getClasses(url : String) : Seq[PSet] = {
-    val classesListPage : Page = mech.get(url)
+  def getDirContent(url : URI, pid : ContentId) : Iterable[ContentInfo] = {
+    val classesListPage : Page = mech.get(url.toString)
     val content = classesListPage.getWebResponse.getContentAsString
-    //println(f"CLASSES CONTENT \n\n $content \n\n" )
     val parser = new Parser()
-    val classes = parser.parseClasses(content)
+    val classes = parser.parseDirContent(content)
 
     classes.map( c => c match {
-      case MClass (inc, nod, doc, label) => {
+      case ClassLink (inc, nod, doc, label) => {
         val url = f"https://didattica.polito.it/pls/portal30/sviluppo.materiale.next_level?inc=$inc&nod=$nod&doc=$doc"
-        new PClass(url, label, nod)
+        new DirectoryInfo(new URI(url), label,
+          new ContentId(ContentType.Directory, nod), Some(pid))
       }
-      case AFile (url, id, label) =>
-        new PFile(url, label, id)
+      case FileLink (url, id, label, format, size) =>
+        new FileInfo(new URI(url), label,
+          new ContentId(ContentType.File, id),
+          Some(pid), Formats(FileFormat.DOC))
     })
   }
 
-  def downloadFile(url: String, path: String) : String = {
+  def downloadFile(url: URI, path: String) : String = {
     mech.downloadFile(ClientUri.PortalHost + url, path)
   }
 
 }
-
-abstract  class PSet( url: String,  label: String,  id: Int)
-case class PCourse(url: String, label: String, id: Int) extends PSet(url, label, id)
-case class PClass(url: String, label: String, id: Int) extends  PSet(url, label, id)
-case class PFile(url: String, label: String, id: Int) extends  PSet(url, label, id)

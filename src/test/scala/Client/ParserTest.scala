@@ -43,7 +43,7 @@ class ParserTest extends FunSuite {
     assert(content != null)
 
     val parser = new Parser()
-    val classes = parser.parseClasses(content)
+    val classes = parser.parseDirContent(content)
 
     assert(3 === classes.length)
   }

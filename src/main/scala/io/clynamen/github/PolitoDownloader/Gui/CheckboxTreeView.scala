@@ -1,5 +1,7 @@
 package io.clynamen.github.PolitoDownloader.Gui
 
+import javafx.event.EventHandler
+import javafx.scene.control.TreeItem.TreeModificationEvent
 import javafx.scene.{control => jfxsc}
 import scalafx.Includes._
 import scalafx.event.ActionEvent
@@ -12,8 +14,11 @@ import scala.collection.mutable.{Map, Stack}
 
   private val rootItem = new TreeItem[ItemView]
   treeView.root = rootItem
+  rootItem.expanded = true
+  treeView.showRoot = false
 
   private val itemToTreeItemMap = Map[ItemView, TreeItem[ItemView]]()
+  private val itemToParentItemMap = Map[ItemView, ItemView]()
   private var itemCount = 0
 
   def addItemAtRoot(item: ItemView) : Unit = {
@@ -26,7 +31,12 @@ import scala.collection.mutable.{Map, Stack}
     val parentTreeItem = itemToTreeItemMap.getOrElse(parent, {
       throw new Exception("Trying to add item to non existing parent")
     })
+    itemToParentItemMap.put(item, parent)
     addToTreeItem(parentTreeItem, item, treeItem)
+  }
+
+  def parentOfItem(item: ItemView) : Option[ItemView] = {
+      itemToParentItemMap.get(item)
   }
 
   def length = itemCount
@@ -35,11 +45,49 @@ import scala.collection.mutable.{Map, Stack}
      setChecked(getTreeItemOrThrowNonExistent(item), checked)
   }
 
+  def setCheckable(item: ItemView, checkable: Boolean) = {
+    checkboxOf(item).setDisable(!checkable)
+  }
+
+  private def checkboxOf(item: ItemView) = {
+    getTreeItemOrThrowNonExistent(item).graphic.value.asInstanceOf[jfxsc.CheckBox]
+  }
+
+  def expandRecursively(item: ItemView) = {
+    val treeItem = getTreeItemOrThrowNonExistent(item)
+    expandTreeItemRecursively(treeItem)
+  }
+
+  private def expandTreeItemRecursively(item: TreeItem[ItemView]) : Unit = {
+    item.expanded = true
+    item.children.foreach(i=> expandTreeItemRecursively(i))
+  }
+
   def checkItemRecursively(item: ItemView, checked: Boolean) = {
     recursiveCheck(getTreeItemOrThrowNonExistent(item), checked)
   }
 
   def isChecked(item: ItemView) : Boolean = getChecked(getTreeItemOrThrowNonExistent(item))
+  def hasChildren(item: ItemView) : Boolean = {
+    getTreeItemOrThrowNonExistent(item).children.size > 0
+  }
+
+  def removeChildren(item: ItemView) = {
+    removeTreeItemChildren(getTreeItemOrThrowNonExistent(item))
+  }
+
+  def removeTreeItemChildren(item: TreeItem[ItemView]) : Unit = {
+    item.children.foreach(i=>removeTreeItemChildren(i))
+    val toRemove = item.children.toList
+    toRemove.foreach(i=> removeTreeItem(item, i))
+  }
+
+  def removeTreeItem(parent: TreeItem[ItemView], item: TreeItem[ItemView]) = {
+    itemCount -= 1
+    itemToTreeItemMap.remove(item.getValue)
+    itemToParentItemMap.remove(item.getValue)
+    parent.children.remove(item)
+  }
 
   def getTreeItemOrThrowNonExistent(item: ItemView) = itemToTreeItemMap.getOrElse(item, throw new Exception("Non existent item"))
 
@@ -59,7 +107,7 @@ import scala.collection.mutable.{Map, Stack}
         def findNext(): Option[ItemView] = {
           while(stack.length > 0) {
             val treeItem = stack.pop()
-            if (treeItem.children.length > 0 || !filterItem(treeItem) || (treeItem eq rootItem) ) {
+            if (treeItem.children.length > 0  || (treeItem eq rootItem) || !filterItem(treeItem) ) {
 //              stack.pushAll(treeItem.children.toList)
               for ( c <- treeItem.children) stack.push(c)
             } else {
@@ -117,6 +165,12 @@ import scala.collection.mutable.{Map, Stack}
       recursiveCheck(treeItem, checkbox.selected())
       listener.onItemCheckedByUser(item, checkbox.selected())
     }
+    treeItem.addEventHandler(jfxsc.TreeItem.branchExpandedEvent[String], new EventHandler[TreeModificationEvent[String]] {
+      override def handle(event: TreeModificationEvent[String]): Unit = {
+        listener.onBranchExpanded(item)
+        treeItem.removeEventHandler(jfxsc.TreeItem.branchExpandedEvent[String], this)
+      }
+    })
     treeItem
   }
 
@@ -146,5 +200,6 @@ object CheckboxTreeView {
 trait CheckboxTreeViewListener[ItemView] {
 
   def onItemCheckedByUser(item: ItemView, checked: Boolean)
+  def onBranchExpanded(item: ItemView)
 
 }
