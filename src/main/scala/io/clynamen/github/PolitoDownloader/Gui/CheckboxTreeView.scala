@@ -6,9 +6,10 @@ import javafx.scene.{control => jfxsc}
 import scalafx.Includes._
 import scalafx.event.ActionEvent
 import scalafx.scene.control.{CheckBox, TreeItem, Control, TreeView}
+import scalafx.scene.Node
 import scala.collection.mutable.{Map, Stack}
 
-  class CheckboxTreeView[ItemView] private
+  class CheckboxTreeView[ItemView <: CheckboxTreeItemView] private
     (val listener : CheckboxTreeViewListener[ItemView], treeView : TreeView[ItemView] =
       new TreeView[ItemView]) extends Control(treeView) {
 
@@ -49,8 +50,12 @@ import scala.collection.mutable.{Map, Stack}
     checkboxOf(item).setDisable(!checkable)
   }
 
-  private def checkboxOf(item: ItemView) = {
-    getTreeItemOrThrowNonExistent(item).graphic.value.asInstanceOf[jfxsc.CheckBox]
+  private def checkboxOf(item: ItemView) : CheckBox = {
+    checkboxOf(getTreeItemOrThrowNonExistent(item))
+  }
+  private def checkboxOf(item: TreeItem[ItemView]) : CheckBox = {
+      item.graphic.
+        value.asInstanceOf[HCoupleBox[javafx.scene.control.CheckBox, javafx.scene.control.Control]].left
   }
 
   def expandRecursively(item: ItemView) = {
@@ -91,8 +96,8 @@ import scala.collection.mutable.{Map, Stack}
 
   def getTreeItemOrThrowNonExistent(item: ItemView) = itemToTreeItemMap.getOrElse(item, throw new Exception("Non existent item"))
 
-  def checkedLeaves() = getLeaves(v=>(v.graphic.value.asInstanceOf[jfxsc.CheckBox]).selected.value)
-  def uncheckedLeaves() = getLeaves(v=>(!(v.graphic.value.asInstanceOf[jfxsc.CheckBox]).selected.value))
+  def checkedLeaves() = getLeaves(v=>checkboxOf(v).selected.value)
+  def uncheckedLeaves() = getLeaves(v=>(!(checkboxOf(v).selected.value)))
   def leaves() = getLeaves()
 
   private def getLeaves(filterItem : (TreeItem[ItemView]) => (Boolean) = (_) => true) : Iterable[ItemView] = {
@@ -160,7 +165,9 @@ import scala.collection.mutable.{Map, Stack}
   private def createTreeItem(item: ItemView) = {
     val treeItem = new TreeItem[ItemView](item)
     val checkbox = new CheckBox
-    treeItem.graphic = checkbox
+    val hCoupleBox :HCoupleBox[javafx.scene.control.CheckBox, javafx.scene.Node] =
+      new HCoupleBox(checkbox, item.graphic.getOrElse[javafx.scene.Node](new EmptyControl()))
+    treeItem.graphic = hCoupleBox
     checkbox.onAction = (event : ActionEvent) => {
       recursiveCheck(treeItem, checkbox.selected())
       listener.onItemCheckedByUser(item, checkbox.selected())
@@ -180,20 +187,21 @@ import scala.collection.mutable.{Map, Stack}
    }
 
    private def setChecked(item: TreeItem[ItemView], value : Boolean) =
-     item.graphic.value.asInstanceOf[jfxsc.CheckBox].selected.value = value
+     checkboxOf(item).selected.value = value
 
    private def getChecked(item: TreeItem[ItemView]) =
-      item.graphic.value.asInstanceOf[jfxsc.CheckBox].selected.value
+     checkboxOf(item).selected.value
 
 }
 
 object CheckboxTreeView {
 
-  def apply[ItemView]
+  def apply[ItemView <: CheckboxTreeItemView]
     (listener: CheckboxTreeViewListener[ItemView]) :
       CheckboxTreeView[ItemView] = {
     new CheckboxTreeView[ItemView](listener)
   }
+
 
 }
 
@@ -202,4 +210,8 @@ trait CheckboxTreeViewListener[ItemView] {
   def onItemCheckedByUser(item: ItemView, checked: Boolean)
   def onBranchExpanded(item: ItemView)
 
+}
+
+trait CheckboxTreeItemView {
+  def graphic : Option[javafx.scene.Node]
 }

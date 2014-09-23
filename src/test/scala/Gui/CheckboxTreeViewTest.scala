@@ -2,11 +2,12 @@ package Gui
 
 import javafx.application.Platform
 
-import io.clynamen.github.PolitoDownloader.Gui.{CheckboxTreeView, CheckboxTreeViewListener}
+import io.clynamen.github.PolitoDownloader.Gui.{CheckboxTreeItemView, CheckboxTreeView, CheckboxTreeViewListener}
 import org.jemmy.fx.AppExecutor
 import org.scalatest.FunSuite
 
 import scala.collection.mutable.Set
+import scalafx.scene.control.Control
 
 /**
  * FIXME: Fix the initialization of the javafx environment. Currently the enviroment is created
@@ -123,8 +124,10 @@ class CheckboxTreeViewTest extends FunSuite {
 
 }
 
-class TextItemView {
+class TextItemView extends CheckboxTreeItemView {
   def visit(visitor: TextItemViewVisitor): Unit = {}
+
+  override def graphic: Option[javafx.scene.control.Control] = None
 }
 
 class TextItemViewVisitor {

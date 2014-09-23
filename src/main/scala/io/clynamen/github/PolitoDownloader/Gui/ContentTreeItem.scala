@@ -2,12 +2,12 @@ package io.clynamen.github.PolitoDownloader.Gui
 
 import io.clynamen.github.PolitoDownloader.Client.ContentId
 
-import scalafx.scene.control.TreeItem
+import scalafx.scene.control.{Control, TreeItem}
 
-abstract class ContentTreeItem() {
+abstract class ContentTreeItem extends CheckboxTreeItemView {
   def visit(visitor: ContentTreeItemVisitor)
-
   def id : ContentId
+  def graphic : Option[javafx.scene.Node] = None
 }
 
 class PlaceholderTreeItem extends  ContentTreeItem {

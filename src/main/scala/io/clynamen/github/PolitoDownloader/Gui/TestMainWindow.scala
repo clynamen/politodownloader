@@ -45,12 +45,14 @@ object TestMainWindow extends JFXApp with Logging {
   }
 }
 
-trait GItemView {
+trait GItemView extends CheckboxTreeItemView {
   def visit(visitor: TextItemViewVisitor)
+  def graphic : Option[javafx.scene.control.Control]  = None
 }
 
 class TextItemView extends GItemView {
   override def visit(visitor: TextItemViewVisitor): Unit = visitor.visit(this)
+  override def graphic = Some(Label("asdf"))
 }
 
 class IconItemView extends GItemView {
@@ -70,8 +72,8 @@ class TextItemViewVisitor {
 }
 
 class NullListener[ItemView] extends CheckboxTreeViewListener[ItemView] {
-  override def onItemCheckedByUser(item: ItemView, checked: Boolean): Unit  = Unit
-  override def onBranchExpanded(item: ItemView): Unit = Unit
+  override def onItemCheckedByUser(item: ItemView, checked: Boolean): Unit  = {}
+  override def onBranchExpanded(item: ItemView): Unit = {}
 }
 
 object NullListener {
