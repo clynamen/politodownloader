@@ -98,8 +98,8 @@ class Client(userId : String, password: String) extends Logging {
     })
   }
 
-  def downloadFile(url: URI, path: String) : String = {
-    mech.downloadFile(ClientUri.PortalHost + url, path)
+  def downloadFile(url: URI, path: String, downloadedPartCallback : (Long) => Unit) : String = {
+    mech.downloadFile(ClientUri.PortalHost + url, path, downloadedPartCallback)
   }
 
 }

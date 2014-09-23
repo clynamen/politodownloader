@@ -8,7 +8,7 @@ import java.util.Calendar
 import com.gargoylesoftware.htmlunit._
 import com.gargoylesoftware.htmlunit.html.HtmlPage
 import com.gargoylesoftware.htmlunit.util.NameValuePair
-import io.clynamen.github.PolitoDownloader.Utils.StringUtils
+import io.clynamen.github.PolitoDownloader.Utils.{FileUtils, StringUtils}
 import org.eintr.loglady.Logging
 
 import scala.collection.JavaConversions._
@@ -58,7 +58,7 @@ class PimpedMechanize extends Logging {
     log.info("RESPONSE: at=" + res.getUrl + " : " + wRes.getStatusCode + " - " + wRes.getStatusMessage)
   }
 
-  def downloadFile(uri: String, dir: String) : String = {
+  def downloadFile(uri: String, dir: String, downloadedPartCallback : (Long) => Unit) : String = {
     log.info("DOWNLOAD FILE: " + uri)
     val res : Page = get(uri)
     printResponseStatus(res)
@@ -91,7 +91,7 @@ class PimpedMechanize extends Logging {
       log.error("File " + path.toAbsolutePath.toString + " already exist")
     } else {
       Files.createDirectories(Paths.get(dir, ""))
-      Files.copy(res.getWebResponse.getContentAsStream, path)
+      FileUtils.copy(res.getWebResponse.getContentAsStream, path, downloadedPartCallback)
       log.info("File downloaded at " + path.toAbsolutePath.toString)
     }
 

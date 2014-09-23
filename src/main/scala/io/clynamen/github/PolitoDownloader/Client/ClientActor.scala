@@ -14,13 +14,20 @@ case class FileReq(id : ContentId, url: URI, outputDir: String) extends Req
 abstract  class ClientStatus(msg : String)
 case class LoginOk(msg: String) extends ClientStatus(msg)
 case class LoginFailed(msg: String) extends ClientStatus(msg)
-case class FileDownloaded(fileId: ContentId, msg: String) extends ClientStatus(msg)
+
+abstract class DownloadProgress(id: ContentId)
+case class PartDownloaded(id: ContentId, size: Long) extends  DownloadProgress(id)
+case class DownloadCompleted(id: ContentId) extends  DownloadProgress(id)
 
 class ClientActor(val guiUpdateActor: ActorRef, userId : String, password: String) extends Actor with Logging {
   val client = new Client(userId, password)
 
   def sendIterable[T](actor: ActorRef, iterable: Iterable[T], recursive: Boolean) = {
     iterable.foreach(i=> actor ! (i, recursive))
+  }
+
+  def makeDownloadedPartCallback(id: ContentId) = (downloadedBytes: Long) => {
+    guiUpdateActor ! PartDownloaded(id, downloadedBytes)
   }
 
   def receive = {
@@ -41,8 +48,8 @@ class ClientActor(val guiUpdateActor: ActorRef, userId : String, password: Strin
       log.info(f"requesting download of $url in $outputDir ")
       // FIX-ME: override outputDir
       val downloadPath = f"./downloads/$outputDir/"
-      val filename = client.downloadFile(url, downloadPath)
-      guiUpdateActor ! FileDownloaded(id, f"""Downloaded $filename""")
+      val filename = client.downloadFile(url, downloadPath, makeDownloadedPartCallback(id))
+      guiUpdateActor ! DownloadCompleted(id)
     }
 
     case a @ _ => log.info("Unknown msg received, was: " + a);

@@ -207,17 +207,23 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
     updateDownloadButton()
   }
 
-  def onFileDownloaded(fileId: ContentId, msg : String) = {
-    updateStatusLine(msg)
+  def onFilePartDownloaded(fileId: ContentId, downloadedBytes: Long) = {
+    // TODO: Use real file size
+    setDownloadProgress(fileId,  Math.min(0.8, getDownloadedProgress(fileId) + 0.05) )
+  }
+
+  def onFileDownloaded(fileId: ContentId) = {
     val item = itemMap.get(fileId).get
     checkItem(item, true)
     treeView.setCheckable(item, false)
     setDownloadProgress(fileId, 1)
   }
 
-  def setDownloadProgress(fileId: ContentId, percentage: Double) = {
+  def getDownloadedProgress(fileId: ContentId) =
+    downloadList.get(fileId).get.progress
+
+  def setDownloadProgress(fileId: ContentId, percentage: Double) =
     downloadList.get(fileId).get.progress = percentage
-  }
 
   class GUIUpdateActor extends Actor {
     import io.clynamen.github.PolitoDownloader.Utils.RunnableUtils.funToRunnable
@@ -230,8 +236,11 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
       case LoginFailed(msg) => {
         updateStatusLine(msg)
       }
-      case FileDownloaded(id, msg) => {
-        Platform.runLater(funToRunnable(()=> onFileDownloaded(id, msg)))
+      case PartDownloaded(id, downloadedBytes) => {
+        Platform.runLater(funToRunnable(()=> onFilePartDownloaded(id, downloadedBytes)))
+      }
+      case DownloadCompleted(id) => {
+        Platform.runLater(funToRunnable(()=> onFileDownloaded(id)))
       }
       case (dirInfo @ DirectoryInfo(url, label, id, pid), recursive: Boolean) => {
         Platform.runLater(funToRunnable(() => {
