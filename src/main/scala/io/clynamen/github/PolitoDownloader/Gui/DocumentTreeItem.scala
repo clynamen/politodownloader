@@ -12,5 +12,9 @@ class DocumentTreeItem(val info: FileInfo) extends  ContentTreeItem() {
   override def id: ContentId = info.id
 
   override def graphic: Option[javafx.scene.Node] = Some(Label("asdf"))
+
+  var downloaded_ = false
+  def downloaded_=(value: Boolean) = downloaded_ = value
+  def downloaded = downloaded_
 }
 

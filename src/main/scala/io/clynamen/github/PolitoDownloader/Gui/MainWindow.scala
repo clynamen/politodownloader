@@ -63,6 +63,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
 
   val downloadList = new DownloadListView[ContentId, FileDownloadView]() {
     margin = Insets(20)
+    alignment = Pos.TOP_CENTER
   }
 
   val rootTabPane = new TabPane()
@@ -72,7 +73,10 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
     text = "Files"
   }
   rootTabPane += new Tab() {
-    content = downloadList
+    content = new ScrollPane() {
+     fitToWidth = true
+     content = downloadList
+    }
     closable = false
     text = "Download List"
   }
@@ -167,15 +171,24 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
   }
 
   def updateDownloadButton() {
-    val downloadCount = treeView.checkedLeaves().size
+    val downloadCountVisitor = new ContentTreeItemVisitor {
+      var downloadCount = 0
+      override def visit(item: DocumentTreeItem): Unit = {
+        if(!item.downloaded) downloadCount += 1
+      }
+      override def visit(item: DirectoryTreeItem): Unit = {}
+    }
+    treeView.checkedLeaves().foreach(i => i.visit(downloadCountVisitor))
+    val downloadCount = downloadCountVisitor.downloadCount
     if(downloadCount > 0) downloadButton.text = f" Download $downloadCount files"
     else downloadButton.text = DownloadFilesButtonText
   }
 
   def sendFileReq(item: DocumentTreeItem): Unit = {
-    workerActor ! FileReq(item.info.id, item.info.url, getPathForItem(item))
     val downloadView = new FileDownloadView(item.info)
-    downloadList.content.add(downloadView)
+    downloadList.add(item.id, downloadView)
+    item.downloaded = true
+    workerActor ! FileReq(item.info.id, item.info.url, getPathForItem(item))
   }
 
   def downloadFiles() = {
