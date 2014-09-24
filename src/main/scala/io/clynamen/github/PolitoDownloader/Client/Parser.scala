@@ -13,10 +13,18 @@ case class CourseLink(anno: Integer, tipo: String, i: Integer, mat: Integer, lab
 case class ClassLink(inc: Int, nod: Int, doc: Int, label: String) extends Link
 case class FileLink(url: String, id: Int, label: String, format: String, Size : String) extends Link
 case class VideoLink(url: String, id: Int, label: String) extends Link
+abstract class VideoCourseLink()
+case class TypeAVideoCourseLink(id: Int, label: String) extends VideoCourseLink
+case class TypeBVideoCourseLink(id: Int, label: String) extends VideoCourseLink
+case class TypeCVideoCourseLink(id: Int, label: String) extends VideoCourseLink
 
 object Parser {
   val showIncRegex = """javascript:showInc\('(\d+)','(\w+)','(\d+)','(\d+)'\);*""".r
   val nextLevelRegex = """javascript:nextLevel\('(\d+)','(\d+)','(\d+)'\);*""".r
+  val onLineLessonRegex = """javascript:onLineLesson\('L(\d+)','(\d+)'\);*""".r
+  // javascript:showLearnPath('2014','198117');
+  val showLearnPathRegex = """javascript:showLearnPath\('(\d+)','(\d+)'\);*""".r
+  val dokeosLezRegex = """dokeosLez\('(\d+)'\)*""".r
   val nodRegex = """.+nod=(\d+)$""".r
   val lezRegex = """.+lez=(\d+)&.+""".r
 }
@@ -75,4 +83,47 @@ class Parser extends Logging {
     classesList
   }
 
+  def parseVideoCoursesListPage(s : String) : List[VideoCourseLink] = {
+    assert(s != null)
+    val doc : Document = SSoup.parse(s)
+    val links = doc.select("a").iterator
+    val validators = List(typeAValidator _, typeBValidator _, typeCValidator _)
+    val videoCoursesList = ValidatorUtils.
+      applyValidatorsAndReturnOnlyValid[Element, VideoCourseLink](validators, links.toIterable).toList
+    println(videoCoursesList.length)
+    log.info("Parsed " + videoCoursesList.length + " classes")
+    videoCoursesList
+  }
+
+  def typeAValidator(n : Element) : Option[TypeAVideoCourseLink] = {
+    val href = n.attr("href")
+    if (href.contains("onLineLesson")) {
+      val onLineLessonRegex(id, _) = href
+      Some(TypeAVideoCourseLink(id.toInt, n.html))
+    }
+    else
+      None
+  }
+
+  def typeBValidator(n : Element) : Option[TypeBVideoCourseLink] = {
+    val href = n.attr("href")
+    if (href.contains("showLearnPath")) {
+      val showLearnPathRegex(_, id) = href
+      Some(TypeBVideoCourseLink(id.toInt, n.html))
+    }
+    else
+      None
+  }
+
+  def typeCValidator(n : Element) : Option[TypeCVideoCourseLink] = {
+    val onclick = n.attr("onclick")
+    if (onclick != null && onclick.contains("dokeosLez")) {
+      val dokeosLezRegex(id) = onclick
+      Some(TypeCVideoCourseLink(id.toInt, n.html))
+    }
+    else
+      None
+  }
+
 }
+
