@@ -149,8 +149,10 @@ class PimpedMechanize extends Logging {
             log.error(f"Error while downloading $uri: " + t.getMessage)
 
           override def onCompleted(): String = {
-            outStream.close()
-            listener.completed()
+            if(outStream != null) {
+              outStream.close()
+              listener.completed()
+            }
             filename
           }
 
