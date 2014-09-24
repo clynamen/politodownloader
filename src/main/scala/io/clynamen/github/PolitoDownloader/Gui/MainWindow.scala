@@ -193,15 +193,14 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
   }
 
   def updateDownloadButton() {
+    var downloadCount = 0
     val downloadCountVisitor = new ContentTreeItemVisitor {
-      var downloadCount = 0
       override def visit(item: DocumentTreeItem): Unit = {
         if(!item.downloaded) downloadCount += 1
       }
       override def visit(item: DirectoryTreeItem): Unit = {}
     }
     treeView.checkedLeaves().foreach(i => i.visit(downloadCountVisitor))
-    val downloadCount = downloadCountVisitor.downloadCount
     if(downloadCount > 0) downloadButton.text = f" Download $downloadCount files"
     else downloadButton.text = DownloadFilesButtonText
   }
