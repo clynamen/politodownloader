@@ -48,5 +48,17 @@ class ParserTest extends FunSuite {
     assert(3 === classes.length)
   }
 
+  test("Parsed video lessons page should have 3 results ") {
+    val filename = "/lists/videolessons.htm"
+    val content : String = getTestFileContent(filename)
+    assert(content != null)
+
+    val parser = new Parser()
+    val videos = parser.parseVideoCoursePage(content)
+
+    assert(3 === videos.length)
+    print(videos(0))
+  }
+
 
 }
