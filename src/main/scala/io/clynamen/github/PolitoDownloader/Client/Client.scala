@@ -9,7 +9,7 @@ import com.gargoylesoftware.htmlunit.html.HtmlPage
 import org.eintr.loglady.Logging
 import scala.collection.immutable._
 import io.clynamen.github.PolitoDownloader.Utils.StringUtils
-import io.clynamen.github.PolitoDownloader.ClientUri
+import io.clynamen.github.PolitoDownloader.{Gui, ClientUri}
 import java.net.URI
 import scala.language.reflectiveCalls
 

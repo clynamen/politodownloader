@@ -40,7 +40,7 @@ import scala.collection.mutable.{Map, Stack}
       itemToParentItemMap.get(item)
   }
 
-  def length = itemCount
+  def length = itemToTreeItemMap.size
 
   def checkItem(item: ItemView, checked: Boolean) = {
      setChecked(getTreeItemOrThrowNonExistent(item), checked)
@@ -92,6 +92,10 @@ import scala.collection.mutable.{Map, Stack}
     itemToTreeItemMap.remove(item.getValue)
     itemToParentItemMap.remove(item.getValue)
     parent.children.remove(item)
+  }
+
+  def empty : Unit = {
+    removeTreeItemChildren(rootItem)
   }
 
   def getTreeItemOrThrowNonExistent(item: ItemView) = itemToTreeItemMap.getOrElse(item, throw new Exception("Non existent item"))

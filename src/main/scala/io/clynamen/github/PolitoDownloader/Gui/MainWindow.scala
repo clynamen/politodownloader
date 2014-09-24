@@ -11,6 +11,7 @@ import scala.language.implicitConversions
 import scalafx.Includes._
 import scalafx.application.JFXApp
 import scalafx.application.JFXApp.PrimaryStage
+import scalafx.collections.ObservableBuffer
 import scalafx.geometry.{Insets, Pos}
 import scalafx.scene.Scene
 import scalafx.scene.control._
@@ -22,15 +23,32 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
   var actorSystem : ActorSystem = null
   var workerActor : ActorRef = null
   val DownloadFilesButtonText = "Select the files to download"
+  var currentTreeId = 0
+
+  val yearChoiceBox = new ChoiceBox[Int]() {
+    items = ObservableBuffer((2001 to 2015))
+    value = 2015
+  }
+  val matTypeChoiceBox = new ChoiceBox[ContentViewType.ContentViewType]() {
+    items = ObservableBuffer(ContentViewType.Documents, ContentViewType.Videos)
+    value = ContentViewType.Documents
+  }
+
+  val loadButton = new Button() {
+    text = "Load"
+
+    onAction = handle {
+      updateContentsTree()
+    }
+  }
 
   val statusLine = new Label() {
     minWidth = 200
-    maxWidth = 200
   }
 
   val downloadButton = new Button() {
-    minWidth = 100
-    minHeight = 30
+    minWidth = 80
+    minHeight = 20
     text = "Waiting..."
     onAction = handle {
       downloadFiles()
@@ -44,6 +62,11 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
   treeView.hgrow = Priority.ALWAYS
 
   val downloadBorderPane = new BorderPane {
+    top = new HBox(4) {
+      val spacer = new Region();
+      content = List(spacer, matTypeChoiceBox, yearChoiceBox, loadButton)
+      HBox.setHgrow(spacer, Priority.ALWAYS);
+    }
     center = treeView
     bottom =
       new VBox {
@@ -131,7 +154,6 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
   }
 
   var itemMap = scala.collection.mutable.Map[ContentId, ContentTreeItem]()
-  var expandedSet = scala.collection.mutable.Set[ContentId]()
 
   def addItem(pid: Option[ContentId], item: ContentTreeItem) = {
     itemMap.put(item.id, item)
@@ -146,7 +168,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
     override def visit(item: DirectoryTreeItem): Unit = {
       if(!item.contentFetched) {
         treeView.removeChildren(item)
-        workerActor ! DirReq(item.directoryInfo.id, item.directoryInfo.url, recursive)
+        workerActor ! (currentTreeId, DirReq(item.directoryInfo.id, item.directoryInfo.url, recursive))
         item.contentFetched = true
       }
     }
@@ -217,6 +239,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
 
   def checkItemRecursively(item: ContentTreeItem, checked: Boolean) = {
     treeView.checkItemRecursively(item, checked)
+    treeView.expandRecursively(item)
     updateDownloadButton()
   }
 
@@ -238,13 +261,24 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
   def setDownloadProgress(fileId: ContentId, percentage: Double) =
     downloadList.get(fileId).get.progress = percentage
 
+  def updateContentsTree() = {
+    fetchContentsTree(yearChoiceBox.value.value, matTypeChoiceBox.value.value)
+  }
+  def fetchContentsTree(year: Int, contentType: ContentViewType.ContentViewType) = {
+    itemMap.empty
+    treeView.empty
+    currentTreeId += 1
+    updateDownloadButton()
+    workerActor ! (currentTreeId, CourseReq(year))
+  }
+
   class GUIUpdateActor extends Actor {
     import io.clynamen.github.PolitoDownloader.Utils.RunnableUtils.funToRunnable
     def receive = {
       case LoginOk(msg) => {
         updateStatusLine(msg)
         Platform.runLater(funToRunnable(()=> updateDownloadButton()))
-        workerActor ! CourseReq(2014)
+        updateContentsTree()
       }
       case LoginFailed(msg) => {
         updateStatusLine(msg)
@@ -255,27 +289,33 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
       case DownloadCompleted(id) => {
         Platform.runLater(funToRunnable(()=> onFileDownloaded(id)))
       }
-      case (dirInfo @ DirectoryInfo(url, label, id, pid), recursive: Boolean) => {
-        Platform.runLater(funToRunnable(() => {
-          val item = new DirectoryTreeItem(dirInfo)
-          addItem(dirInfo.pid, item)
-          if (recursive) {
-            treeView.expandRecursively(item)
-            checkItemRecursively(item, true)
-          } else {
-            treeView.addItem(item, new PlaceholderTreeItem)
-          }
-        })
-        )
+      case (dirInfo @ DirectoryInfo(url, label, id, pid), recursive: Boolean, treeId: Int) => {
+        if (treeId == currentTreeId) {
+          Platform.runLater(
+            funToRunnable(() => {
+                val item = new DirectoryTreeItem(dirInfo)
+                addItem(dirInfo.pid, item)
+                if (recursive) {
+                  item.visit(expandVisitor(true))
+                  checkItemRecursively(item, true)
+                } else {
+                  treeView.addItem(item, new PlaceholderTreeItem)
+                }
+              }
+            )
+          )
+        }
       }
-      case (fileInfo @ FileInfo(url, label, id, pid, formats), recursive: Boolean) => {
-        Platform.runLater(funToRunnable(() => {
-          val item = new DocumentTreeItem(fileInfo)
-          addItem(fileInfo.pid, item)
-          if (recursive)
-            checkItem(item, true)
-          updateDownloadButton()
-        }))
+      case (fileInfo @ FileInfo(url, label, id, pid, formats), recursive: Boolean, treeId: Int) => {
+        if (treeId == currentTreeId) {
+          Platform.runLater(funToRunnable(() => {
+            val item = new DocumentTreeItem(fileInfo)
+            addItem(fileInfo.pid, item)
+            if (recursive)
+              checkItem(item, true)
+            updateDownloadButton()
+          }))
+        }
       }
     }
   }

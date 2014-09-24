@@ -22,8 +22,8 @@ case class DownloadCompleted(id: ContentId) extends  DownloadProgress(id)
 class ClientActor(val guiUpdateActor: ActorRef, userId : String, password: String) extends Actor with Logging {
   val client = new Client(userId, password)
 
-  def sendIterable[T](actor: ActorRef, iterable: Iterable[T], recursive: Boolean) = {
-    iterable.foreach(i=> actor ! (i, recursive))
+  def sendIterable[T](actor: ActorRef, iterable: Iterable[T], recursive: Boolean, currentTreeId: Int) = {
+    iterable.foreach(i=> actor ! (i, recursive, currentTreeId))
   }
 
   def makeDownloadedPartCallback(id: ContentId) = (downloadedBytes: Long) => {
@@ -36,12 +36,12 @@ class ClientActor(val guiUpdateActor: ActorRef, userId : String, password: Strin
       guiUpdateActor ! res
     }
 
-    case CourseReq(year) => {
-      sendIterable(guiUpdateActor, client.getCourses(year), false)
+    case (currentTreeId: Int, CourseReq(year)) => {
+      sendIterable(guiUpdateActor, client.getCourses(year), false, currentTreeId)
     }
 
-    case DirReq(pid, url, recursive) => {
-      sendIterable(guiUpdateActor, client.getDirContent(url, pid), recursive)
+    case (currentTreeId: Int, DirReq(pid, url, recursive)) => {
+      sendIterable(guiUpdateActor, client.getDirContent(url, pid), recursive, currentTreeId)
     }
 
     case FileReq(id, url, outputDir)=> {
