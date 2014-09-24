@@ -9,11 +9,11 @@ import javafx.scene.{control => jfxc}
 import scala.language.implicitConversions
 import scalafx.Includes._
 
-class FileDownloadView(fileInfo: FileInfo) extends javafx.scene.layout.BorderPane {
+class FileDownloadView(labelValue: String) extends javafx.scene.layout.BorderPane {
   val progressBar = new ProgressBar()
   progressBar.alignmentInParent = Pos.BOTTOM_CENTER
   progressBar.prefWidth = 200
-  val label = Label(fileInfo.label)
+  val label = Label(labelValue)
   label.alignment = Pos.TOP_CENTER
 
   setTop(label)

@@ -12,6 +12,7 @@ import io.clynamen.github.PolitoDownloader.Utils.StringUtils
 import io.clynamen.github.PolitoDownloader.{Gui, ClientUri}
 import java.net.URI
 import scala.language.reflectiveCalls
+import com.github.pathikrit.dijon.{parse => jsonParse}
 
 class Client(userId : String, password: String) extends Logging {
   require(!StringUtils.isNullOrEmpty((userId)), "user id cannot be empty")
@@ -91,6 +92,57 @@ class Client(userId : String, password: String) extends Logging {
     )
   }
 
+  def addCorrectRootForVideoPageUrl(url: String) : URI = {
+    if(url.startsWith("template_video.php"))
+      new URI("http://elearning.polito.it/gadgets/video/"+ url)
+    else if (url.startsWith("/pls/"))
+      new URI("https://didattica.polito.it" + url)
+    else if (url.startsWith("lp_controller"))
+      new URI("http://elearning.polito.it/main/newscorm/" + url)
+    else throw new Exception("Unknown url: " + url)
+  }
+
+  def getVideoDirContent(linkData : VideoCourseLink, pid : ContentId) : Iterable[VideoFileInfo] = {
+    val content = getVideoCoursePage(linkData)
+
+    val parser = new Parser()
+    val classes = parser.parseVideoCoursePage(content)
+
+    classes.map( c => {
+        val contentUri = addCorrectRootForVideoPageUrl(c.url)
+        new VideoFileInfo(c.label, new ContentId(ContentType.Video, c.id),
+                      Some(pid), Formats(FileFormat.MP4), contentUri)
+      }
+    )
+  }
+
+  def getVideoCoursePage(linkData: VideoCourseLink) = {
+    linkData match {
+      case a : TypeAVideoCourseLink => getTypeAVideoCoursePage(a)
+      case b : TypeBVideoCourseLink => getTypeBVideoCoursePage(b)
+      case c : TypeCVideoCourseLink => getTypeCVideoCoursePage(c)
+    }
+  }
+
+  def getTypeAVideoCoursePage(linkData: TypeAVideoCourseLink) = {
+    val videoListPage : Page = mech.safeGet(ClientUri.typeAVideoList(linkData.id))
+    videoListPage.getWebResponse.getContentAsString
+  }
+
+  def getTypeBVideoCoursePage(linkData: TypeBVideoCourseLink) = {
+    val videoListPage : Page = mech.safeGet(ClientUri.typeBVideoList(linkData.id))
+    videoListPage.getWebResponse.getContentAsString
+  }
+
+  def getTypeCVideoCoursePage(linkData: TypeCVideoCourseLink) = {
+    val formDataPage = mech.get(ClientUri.typeCVideoListAccess(linkData.id))
+    val formData = jsonParse(formDataPage.getWebResponse.getContentAsString)
+    println(formData.toString)
+    println(formData.utente.toString.replaceAll("\"", ""))
+    val videoListPage : Page = mech.safeGet(ClientUri.typeCVideoList(formData))
+    videoListPage.getWebResponse.getContentAsString
+  }
+
   def getDirContent(url : URI, pid : ContentId) : Iterable[ContentInfo] = {
     val classesListPage : Page = mech.get(url.toString)
     val content = classesListPage.getWebResponse.getContentAsString
@@ -110,8 +162,16 @@ class Client(userId : String, password: String) extends Logging {
     })
   }
 
-  def downloadFile(url: URI, path: String, downloadedPartCallback : (Long) => Unit) : String = {
-    mech.downloadFile(ClientUri.PortalHost + url, path, downloadedPartCallback)
+  def getVideoUrlForFormat(url: URI, format: VideoFileFormat.VideoFileFormat) = {
+    val videoPage : Page = mech.safeGet(url.toString)
+    val content = videoPage.getWebResponse.getContentAsString
+    val availableLinks = new Parser().parseVideoFormatsLink(content)
+    val videoLink = availableLinks(format.id)
+    url.resolve(videoLink)
+  }
+
+  def downloadFile(url: URI, path: String, listener: DownloadListener) : Boolean = {
+    mech.downloadFile2(url.toString, path, listener)
   }
 
 }

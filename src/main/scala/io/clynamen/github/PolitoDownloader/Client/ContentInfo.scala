@@ -11,6 +11,8 @@ case class DirectoryInfo(url: URI, label: String, id: ContentId,
 case class FileInfo(url: URI, label : String, id: ContentId, pid : Option[ContentId],
                     formats : Formats) extends ContentInfo(label, id, pid)
 case class VideoDirectoryInfo(val linkData: VideoCourseLink, label: String, id: ContentId, pid: Option[ContentId]) extends ContentInfo(label, id, pid)
+case class VideoFileInfo(label : String, id: ContentId, pid : Option[ContentId],
+                    formats : Formats, url: URI) extends ContentInfo(label, id, pid)
 
 class Formats private (val formatList : Iterable[FileFormat]) {
 }

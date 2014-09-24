@@ -32,7 +32,9 @@ libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-library" % "2.11.2",
   "org.streum" % "configrity-core_2.10" % "1.0.0",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2",
-  "net.java.jemmy" % "JemmyFX" % "0.9.3-SNAPSHOT"
+  "net.java.jemmy" % "JemmyFX" % "0.9.3-SNAPSHOT",
+  "com.github.pathikrit" %% "dijon" % "0.2.4",
+  "com.ning" % "async-http-client" % "1.8.13"
 )
 
 mainClass in Compile := Some("io.clynamen.github.PolitoDownloader.Gui.MainWindow")

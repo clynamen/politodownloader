@@ -18,6 +18,7 @@ class PlaceholderTreeItem extends  ContentTreeItem {
 
 trait ContentTreeItemVisitor {
   def visit(item: DocumentTreeItem)
+  def visit(item: VideoTreeItem)
   def visit(item: DirectoryTreeItem)
   def visit(item: VideoDirectoryTreeItem)
 }

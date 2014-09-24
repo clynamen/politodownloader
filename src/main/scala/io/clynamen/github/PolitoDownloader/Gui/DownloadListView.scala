@@ -14,6 +14,7 @@ class DownloadListView[K, V <: Node] extends FlowPane(Orientation.VERTICAL) {
   }
 
   def add(k: K, v: V) = {
+    keyToItemMap.put(k, v)
     content.add(v)
   }
 

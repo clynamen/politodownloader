@@ -1,5 +1,7 @@
 package io.clynamen.github.PolitoDownloader.Client
 
+import java.net.URI
+
 import org.eintr.loglady.Logging
 import org.filippodeluca.ssoup.SSoup
 import org.filippodeluca.ssoup.SSoup._
@@ -31,7 +33,7 @@ object Parser {
   val showLearnPathRegex = """javascript:showLearnPath\('(\d+)','(\d+)'\);*""".r
   val dokeosLezRegex = """dokeosLez\('(\d+)'\)*""".r
   val nodRegex = """.+nod=(\d+)$""".r
-  val lezRegex = """.+lez=(\d+)&.+""".r
+  val lezRegex = """.+lez=(\d+).*""".r
 }
 
 class Parser extends Logging {
@@ -73,19 +75,28 @@ class Parser extends Logging {
     classesList
   }
 
-  def parseVideoCoursePage(s : String) : List[Link] = {
+  def parseVideoFormatsLink(s: String) : Array[URI] = {
     assert(s != null)
     val doc : Document = SSoup.parse(s)
 
-    var classes = List[Link]();
+    val linkList = for (link <- doc.select("#content li a").iterator) yield
+      new URI(link.attr("href"))
+    linkList.toArray
+  }
+
+  def parseVideoCoursePage(s : String) : List[VideoLink] = {
+    assert(s != null)
+    val doc : Document = SSoup.parse(s)
+
+    var videos = List[VideoLink]()
     for (link <- doc.select("#lessonList li a").filter( e => !e.hasClass("argoLink") ).iterator) {
       val href: String = link.attr("href")
       val lezRegex(videoId) = href
-      classes = new VideoLink(href, videoId.toInt, link.html) :: classes
+      videos = new VideoLink(href, videoId.toInt, link.html) :: videos
     }
-    val classesList = classes.toList
-    log.info("Parsed " + classesList.length.toString + " classes")
-    classesList
+    val videosList = videos.toList
+    log.info("Parsed " + videosList.length.toString + " classes")
+    videosList.reverse
   }
 
   def parseVideoCoursesListPage(s : String) : List[VideoCourseLink] = {
