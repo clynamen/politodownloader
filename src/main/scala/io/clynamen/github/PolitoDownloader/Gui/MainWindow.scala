@@ -1,7 +1,6 @@
 package io.clynamen.github.PolitoDownloader.Gui
 
 import javafx.application.Platform
-import javafx.scene.{control => jfxsc}
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import io.clynamen.github.PolitoDownloader.Client._
@@ -16,7 +15,6 @@ import scalafx.geometry.{Insets, Pos}
 import scalafx.scene.Scene
 import scalafx.scene.control._
 import scalafx.scene.layout._
-
 
 object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[ContentTreeItem]{
   val Title = "Polito Downloader"
@@ -172,6 +170,13 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
         item.contentFetched = true
       }
     }
+    override def visit(item: VideoDirectoryTreeItem) = {
+      if(!item.contentFetched) {
+        treeView.removeChildren(item)
+//        workerActor ! (currentTreeId, DirReq(item.directoryInfo.id, item.directoryInfo.url, recursive))
+        item.contentFetched = true
+      }
+    }
   }
 
   override def onItemCheckedByUser(item: ContentTreeItem, checked: Boolean) = {
@@ -199,6 +204,8 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
         if(!item.downloaded) downloadCount += 1
       }
       override def visit(item: DirectoryTreeItem): Unit = {}
+
+      override def visit(item: VideoDirectoryTreeItem): Unit = {}
     }
     treeView.checkedLeaves().foreach(i => i.visit(downloadCountVisitor))
     if(downloadCount > 0) downloadButton.text = f" Download $downloadCount files"
@@ -218,6 +225,8 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
         sendFileReq(item)
       }
       override def visit(item: DirectoryTreeItem): Unit = {}
+
+      override def visit(item: VideoDirectoryTreeItem): Unit = {}
     }
     treeView.checkedLeaves().foreach(f => f.visit(downloadVisitor))
 
@@ -268,7 +277,10 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
     treeView.empty
     currentTreeId += 1
     updateDownloadButton()
-    workerActor ! (currentTreeId, CourseReq(year))
+    contentType match {
+      case ContentViewType.Documents =>  workerActor ! (currentTreeId, CourseReq(year))
+      case ContentViewType.Videos =>  workerActor ! (currentTreeId, VideoCourseReq(year))
+    }
   }
 
   class GUIUpdateActor extends Actor {
@@ -301,6 +313,23 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
                   treeView.addItem(item, new PlaceholderTreeItem)
                 }
               }
+            )
+          )
+        }
+      }
+      case (videoDirInfo @ VideoDirectoryInfo(linkData, label, id, pid), recursive: Boolean, treeId: Int) => {
+        if (treeId == currentTreeId) {
+          Platform.runLater(
+            funToRunnable(() => {
+              val item = new VideoDirectoryTreeItem(videoDirInfo)
+              addItem(videoDirInfo.pid, item)
+              if (recursive) {
+                item.visit(expandVisitor(true))
+                checkItemRecursively(item, true)
+              } else {
+                treeView.addItem(item, new PlaceholderTreeItem)
+              }
+            }
             )
           )
         }

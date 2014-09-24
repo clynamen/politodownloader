@@ -11,7 +11,9 @@ package object ClientUri {
   val ShibLogin = PortalLoginHost + "/secure-studenti/ShibLogin.php"
   val UserPasswordLogin = IdpHost + "/idp/Authn/X509Mixed/UserPasswordLogin"
   private val CoursesListUrlFormat = PortalHost + "/pls/portal30/sviluppo.materiale.elenco?a=%d&t=M"
+  private val VideoCoursesListUrlFormat = PortalHost + "/portal/pls/portal/sviluppo.materiale.elenco?a=%d&t=E"
 
   def courses(year : Integer) = String.format(CoursesListUrlFormat, year)
+  def videoCourses(year : Integer) = String.format(VideoCoursesListUrlFormat, year)
 
 }

@@ -2,7 +2,7 @@ package io.clynamen.github.PolitoDownloader.Client
 
 object ContentType extends Enumeration {
   type ContentType = Value
-  val File, Video, Directory, VideoSet, Course = Value
+  val File, Video, Directory, VideoDirectory, Course = Value
 }
 
 import ContentType._

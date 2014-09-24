@@ -79,6 +79,18 @@ class Client(userId : String, password: String) extends Logging {
     })
   }
 
+  def getVideoCourses(year: Integer) : Iterable[VideoDirectoryInfo] = {
+    val coursesListPage : Page = mech.get(ClientUri.videoCourses(year))
+    val content = coursesListPage.getWebResponse.getContentAsString
+
+    val parser = new Parser()
+    val classes = parser.parseVideoCoursesListPage(content)
+
+    classes.map( c => VideoDirectoryInfo(c, c.label,
+                        new ContentId(ContentType.VideoDirectory, c.id), None)
+    )
+  }
+
   def getDirContent(url : URI, pid : ContentId) : Iterable[ContentInfo] = {
     val classesListPage : Page = mech.get(url.toString)
     val content = classesListPage.getWebResponse.getContentAsString

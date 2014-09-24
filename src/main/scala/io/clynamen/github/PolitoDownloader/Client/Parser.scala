@@ -13,10 +13,15 @@ case class CourseLink(anno: Integer, tipo: String, i: Integer, mat: Integer, lab
 case class ClassLink(inc: Int, nod: Int, doc: Int, label: String) extends Link
 case class FileLink(url: String, id: Int, label: String, format: String, Size : String) extends Link
 case class VideoLink(url: String, id: Int, label: String) extends Link
-abstract class VideoCourseLink()
-case class TypeAVideoCourseLink(id: Int, label: String) extends VideoCourseLink
-case class TypeBVideoCourseLink(id: Int, label: String) extends VideoCourseLink
-case class TypeCVideoCourseLink(id: Int, label: String) extends VideoCourseLink
+
+trait VideoCourseLinkTrait {
+  def id: Int
+  def label: String
+}
+abstract class VideoCourseLink(id: Int, label: String) extends  VideoCourseLinkTrait
+case class TypeAVideoCourseLink(id: Int, label: String) extends VideoCourseLink(id, label)
+case class TypeBVideoCourseLink(id: Int, label: String) extends VideoCourseLink(id, label)
+case class TypeCVideoCourseLink(id: Int, label: String) extends VideoCourseLink(id, label)
 
 object Parser {
   val showIncRegex = """javascript:showInc\('(\d+)','(\w+)','(\d+)','(\d+)'\);*""".r
@@ -99,7 +104,7 @@ class Parser extends Logging {
     val href = n.attr("href")
     if (href.contains("onLineLesson")) {
       val onLineLessonRegex(id, _) = href
-      Some(TypeAVideoCourseLink(id.toInt, n.html))
+      Some(TypeAVideoCourseLink(id.toInt, n.text))
     }
     else
       None
@@ -109,7 +114,7 @@ class Parser extends Logging {
     val href = n.attr("href")
     if (href.contains("showLearnPath")) {
       val showLearnPathRegex(_, id) = href
-      Some(TypeBVideoCourseLink(id.toInt, n.html))
+      Some(TypeBVideoCourseLink(id.toInt, n.text))
     }
     else
       None
@@ -119,7 +124,7 @@ class Parser extends Logging {
     val onclick = n.attr("onclick")
     if (onclick != null && onclick.contains("dokeosLez")) {
       val dokeosLezRegex(id) = onclick
-      Some(TypeCVideoCourseLink(id.toInt, n.html))
+      Some(TypeCVideoCourseLink(id.toInt, n.text))
     }
     else
       None

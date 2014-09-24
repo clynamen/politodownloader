@@ -8,6 +8,7 @@ import org.eintr.loglady.Logging
 abstract class Req()
 case class LoginReq() extends  Req
 case class CourseReq(year: Int) extends Req
+case class VideoCourseReq(year: Int) extends Req
 case class DirReq(pid: ContentId, url: URI, recursive: Boolean) extends  Req
 case class FileReq(id : ContentId, url: URI, outputDir: String) extends Req
 
@@ -38,6 +39,10 @@ class ClientActor(val guiUpdateActor: ActorRef, userId : String, password: Strin
 
     case (currentTreeId: Int, CourseReq(year)) => {
       sendIterable(guiUpdateActor, client.getCourses(year), false, currentTreeId)
+    }
+
+    case (currentTreeId: Int, VideoCourseReq(year)) => {
+      sendIterable(guiUpdateActor, client.getVideoCourses(year), false, currentTreeId)
     }
 
     case (currentTreeId: Int, DirReq(pid, url, recursive)) => {
