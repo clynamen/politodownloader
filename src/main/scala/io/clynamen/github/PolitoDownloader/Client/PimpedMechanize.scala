@@ -170,7 +170,10 @@ class PimpedMechanize extends Logging {
             listener.started(filename)
             val path = Paths.get(dir, filename)
             if(Files.exists(path)) {
-              log.error("File " + path.toAbsolutePath.toString + " already exist")
+              val msg = "File " + path.toAbsolutePath.toString + " already exist"
+              log.warn(msg)
+              listener.error("Already exists")
+              return STATE.ABORT
             } else {
               Files.createDirectories(Paths.get(dir, ""))
             }

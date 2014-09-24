@@ -23,6 +23,7 @@ abstract class DownloadProgress(id: ContentId)
 case class PartDownloaded(id: ContentId, size: Long) extends  DownloadProgress(id)
 case class DownloadCompleted(id: ContentId) extends  DownloadProgress(id)
 case class DownloadStarted(id: ContentId, filename: String) extends  DownloadProgress(id)
+case class DownloadError(id: ContentId, filename: String) extends  DownloadProgress(id)
 
 class ClientActor(val guiUpdateActor: ActorRef, userId : String, password: String) extends Actor with Logging {
   val client = new Client(userId, password)
@@ -44,6 +45,8 @@ class ClientActor(val guiUpdateActor: ActorRef, userId : String, password: Strin
       override def completed(): Unit = guiUpdateActor ! DownloadCompleted(id)
 
       override def started(filename: String): Unit = guiUpdateActor ! DownloadStarted(id, filename)
+
+      override def error(cause: String): Unit = guiUpdateActor ! DownloadError(id, cause)
     })
   }
 

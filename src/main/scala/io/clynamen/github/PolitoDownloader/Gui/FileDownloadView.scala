@@ -23,5 +23,7 @@ class FileDownloadView(labelValue: String) extends javafx.scene.layout.BorderPan
 
   def progress_=(value: Double) = progressBar.progress = value
   def progress : Double = progressBar.progress.value
+
+  def text_=(value: String) = setCenter(Label(value))
 }
 

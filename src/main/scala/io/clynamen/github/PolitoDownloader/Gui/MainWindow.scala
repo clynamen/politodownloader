@@ -46,6 +46,13 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
     minWidth = 200
   }
 
+  val progressIndicator = new ProgressIndicator() {
+    minWidth = 20
+    maxWidth = 20
+    maxHeight = 20
+    minHeight = 20
+  }
+
   val downloadButton = new Button() {
     minWidth = 80
     minHeight = 20
@@ -71,6 +78,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
     bottom =
       new VBox {
         content = List(
+          progressIndicator,
           statusLine,
           new HBox(20) {
             content = List(
@@ -129,6 +137,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
     workerActor = newActor
     updateStatusLine("Logging in... (it takes some time)")
     workerActor ! LoginReq()
+    showProgress(true)
   }
 
   def getUserIdAndPassword : UserCredentials = {
@@ -169,6 +178,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
     override def visit(item: DirectoryTreeItem): Unit = {
       if(!item.contentFetched) {
         treeView.removeChildren(item)
+        showProgress(true)
         workerActor ! (currentTreeId, DirReq(item.directoryInfo.id, item.directoryInfo.url, recursive))
         item.contentFetched = true
       }
@@ -176,12 +186,22 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
     override def visit(item: VideoDirectoryTreeItem) = {
       if(!item.contentFetched) {
         treeView.removeChildren(item)
+        showProgress(true)
         workerActor ! (currentTreeId, VideoDirReq(item.videoDirectoryInfo.id,
                 item.videoDirectoryInfo.linkData, recursive))
         item.contentFetched = true
       }
     }
 
+  }
+
+  def showProgress(show: Boolean) = {
+    if(show) {
+      progressIndicator.visible = true
+      progressIndicator.progress = -1
+    } else {
+      progressIndicator.visible = false
+    }
   }
 
   override def onItemCheckedByUser(item: ContentTreeItem, checked: Boolean) = {
@@ -299,7 +319,12 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
   def onFileDownloaded(fileId: ContentId) = {
     val item = itemMap.get(fileId).get
     checkItem(item, true)
-    setDownloadProgressCompleted(fileId)
+    setDownloadProgressCompleted(fileId, "green")
+    statusLine.text = "Logged in"
+  }
+
+  def onFileDownloadError(fileId: ContentId, msg: String) = {
+    setDownloadProgressCompleted(fileId, "yellow", msg)
     statusLine.text = "Logged in"
   }
 
@@ -309,11 +334,12 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
   def setDownloadProgress(fileId: ContentId, percentage: Double) =
     downloadList.get(fileId).get.progress = percentage
 
-  def setDownloadProgressCompleted(fileId: ContentId) = {
+  def setDownloadProgressCompleted(fileId: ContentId, color: String, msg: String = null) = {
     val progressBar = downloadList.get(fileId).get
     progressBar.progress = 1
-    progressBar.style = "-fx-accent: green;"
+    progressBar.style = f"-fx-accent: $color;"
     progressBar.applyCss()
+    if(msg != null) progressBar.text_=(msg)
   }
 
   def updateContentsTree() = {
@@ -334,7 +360,11 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
     def receive = {
       case LoginOk(msg) => {
         updateStatusLine(msg)
-        Platform.runLater(funToRunnable(()=> updateDownloadButton()))
+        Platform.runLater(funToRunnable(()=> {
+            updateDownloadButton()
+            showProgress(false)
+          }
+        ))
         updateContentsTree()
       }
       case LoginFailed(msg) => {
@@ -349,6 +379,9 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
       case DownloadCompleted(id) => {
         Platform.runLater(funToRunnable(()=> onFileDownloaded(id)))
       }
+      case DownloadError(id, msg) => {
+        Platform.runLater(funToRunnable(()=> onFileDownloadError(id, msg)))
+      }
       case (dirInfo @ DirectoryInfo(url, label, id, pid), recursive: Boolean, treeId: Int) => {
         if (treeId == currentTreeId) {
           Platform.runLater(
@@ -361,6 +394,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
                 } else {
                   treeView.addItem(item, new PlaceholderTreeItem)
                 }
+                showProgress(false)
               }
             )
           )
@@ -378,6 +412,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
               } else {
                 treeView.addItem(item, new PlaceholderTreeItem)
               }
+              showProgress(false)
             }
             )
           )
@@ -391,6 +426,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
             if (recursive)
               checkItem(item, true)
             updateDownloadButton()
+            showProgress(false)
           }))
         }
       }
@@ -402,6 +438,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
             if (recursive)
               checkItem(item, true)
             updateDownloadButton()
+            showProgress(false)
           }))
         }
       }
@@ -414,7 +451,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
         items = List(
           new Menu("Info") {
             items = List(
-              new MenuItem("Version: 0.1.0 Alpha")
+              new MenuItem("Version: 0.2.0 Alpha")
             )
           },
           new MenuItem("reset configuration and close") {
