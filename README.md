@@ -4,18 +4,18 @@
 
 This software is currently in alpha  
 
-
-![Alpha Version Interface](https://lh4.googleusercontent.com/-PnQmAonk26w/U-QxoAUS6TI/AAAAAAAAAvo/nnTy-jnuNDc/w822-h503-no/polito-downloader-alpha.png)
-
+![Alpha Version Interface](https://cloud.githubusercontent.com/assets/578915/4397694/e9333bbe-4446-11e4-8ee3-5df40a74fdef.png)
 
 ---
 
 ## Features:
 
 - [x] Item selection and download
-- [ ] Video lesson download
+- [x] Video lesson download
+- [x] Maintain materials tree structure
 - [ ] Directory and sub-directory sync
-- [ ] Maintain materials tree structure
+- [ ] File size label and download ETA 
+- [ ] Better error handling
 
 ## Install Requirements:
 
@@ -28,11 +28,8 @@ Files will be downloaded in the locally created 'Downloads' directory.
 ## TODO:
 
 * cleanup current code
-* use a MVC for the treeview
-* improve ui layout
 * remove mutable variables
 * add error handling for actors
 * search for possible concurrency/lost message  issues
 * add other unit tests
-
 
