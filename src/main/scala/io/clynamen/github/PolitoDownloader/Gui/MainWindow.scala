@@ -451,7 +451,7 @@ object MainWindow extends JFXApp with Logging with CheckboxTreeViewListener[Cont
         items = List(
           new Menu("Info") {
             items = List(
-              new MenuItem("Version: 0.2.0 Alpha")
+              new MenuItem("Version: 0.2.1 Alpha")
             )
           },
           new MenuItem("reset configuration and close") {
