@@ -92,16 +92,17 @@ class PimpedMechanize extends Logging {
     log.info("RESPONSE: at=" + res.getUrl + " : " + wRes.getStatusCode + " - " + wRes.getStatusMessage)
   }
 
-  def getRealUrl(uri: String) = {
+  def getRealUrlAndFileName(uri: String) : (String, String) = {
     val client = new AsyncHttpClient();
     val request = client.prepareGet(uri)
     importCookieFromWebClient(request, webClient)
-    val location = request.execute(new AsyncHandler[String] {
+    val (location, filename) = request.execute(new AsyncHandler[(String, String)] {
       var loc = ""
+      var filename = ""
       override def onThrowable(t: Throwable): Unit = {}
 
-      override def onCompleted(): String = {
-        loc
+      override def onCompleted(): (String, String) = {
+        (loc, filename)
       }
 
       override def onBodyPartReceived(bodyPart: HttpResponseBodyPart): STATE = {STATE.ABORT}
@@ -110,15 +111,18 @@ class PimpedMechanize extends Logging {
 
       override def onHeadersReceived(headers: HttpResponseHeaders): STATE = {
         loc = headers.getHeaders.getFirstValue("Location")
+        filename = getFileNameFromHeaders(headers).getOrElse("")
         STATE.ABORT
       }
     }).get()
-    println (f"\n\n\n\n\n\n Location: $uri -> \n $location \n\n\n\n\n")
+
+    println (f"\n\n\n\n\n\n Location: \n $uri -> \n $location\n Filename: $filename  \n\n\n\n\n")
     if(location != null && location.nonEmpty) {
       val redirectUri = new URI(location)
-      new URI(uri).resolve(redirectUri).toString
+      val realUri = new URI(uri).resolve(redirectUri).toString
+      (realUri, filename)
     } else {
-      uri
+      (uri, filename)
     }
   }
 
@@ -138,12 +142,12 @@ class PimpedMechanize extends Logging {
     .setMaximumNumberOfRedirects(Int.MaxValue)
     .setMaxRequestRetry(2).build()
     val client = new AsyncHttpClient(config);
-    val downloadUri = getRealUrl(uri)
+    val (downloadUri, headerFilename) = getRealUrlAndFileName(uri)
     val request =  client.prepareGet(downloadUri)
     importCookieFromWebClient(request, webClient)
     downloadThreadPool.execute(RunnableUtils.funToRunnable( () => {
       val execution = request.execute(new AsyncHandler[String] {
-          var filename : String = "unknown-filename"
+          var filename : String = headerFilename
           var outStream : OutputStream = null
           override def onThrowable(t: Throwable): Unit =
             log.error(f"Error while downloading $uri: " + t.getMessage)
@@ -168,7 +172,8 @@ class PimpedMechanize extends Logging {
           }
 
           override def onHeadersReceived(headers: HttpResponseHeaders): STATE = {
-            filename = getFileName(downloadUri, headers)
+            printAllHeaders(headers)
+            filename = if(filename.isEmpty) getFileName(downloadUri, headers) else filename
             listener.started(filename)
             val path = Paths.get(dir, filename)
             if(Files.exists(path)) {
@@ -231,11 +236,21 @@ class PimpedMechanize extends Logging {
     } else None
   }
 
+  def printAllHeaders(headers: HttpResponseHeaders) = {
+    for {
+      header <- headers.getHeaders.entrySet()
+      v <- header.getValue
+    } yield {
+      val k = header.getKey
+      println(f"HEADER: $k: $v")
+    }
+  }
+
   def downloadFile(uri: String, dir: String, downloadedPartCallback : (Long) => Unit) : String = {
     log.info("DOWNLOAD FILE: " + uri)
     val res : Page = get(uri)
     printResponseStatus(res)
-    var contentDisposition = res.getWebResponse.getResponseHeaderValue("Content-Disposition")
+    val contentDisposition = res.getWebResponse.getResponseHeaderValue("Content-Disposition")
 
     var filename = {
       val today = Calendar.getInstance().getTime()
